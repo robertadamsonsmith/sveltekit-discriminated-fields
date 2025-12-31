@@ -16,7 +16,8 @@
 		"build": "tsc -p tsconfig.build.json",
 		"check": "tsc --noEmit",
 		"test:types": "tsc -p test/types/tsconfig.json",
-		"test": "npm run test:types",
+		"test:runtime": "npm run build && tsc -p test/runtime/tsconfig.json && npx tsx test/runtime/has.test.ts",
+		"test": "npm run test:types && npm run test:runtime",
 		"prepublishOnly": "npm run test && npm run build"
 	},
 	"keywords": [
