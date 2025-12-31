@@ -167,6 +167,10 @@ type Payment = DiscriminatedData<typeof payment>;
 
 Useful when you need to reference the data type elsewhere, such as defining default values or passing data to other functions.
 
+## Note on Runtime Behavior
+
+Type narrowing is compile-time only. At runtime, `'width' in shape` will return `true` even when `kindValue === 'circle'`, because all variant fields exist on the underlying object.
+
 ## License
 
 MIT
