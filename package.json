@@ -1,6 +1,6 @@
 {
 	"name": "sveltekit-discriminated-fields",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Type-safe discriminated union support for SvelteKit form fields",
 	"type": "module",
 	"exports": {
