@@ -1,0 +1,38 @@
+{
+	"name": "sveltekit-discriminated-fields",
+	"version": "0.1.0",
+	"description": "Type-safe discriminated union support for SvelteKit form fields",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"check": "tsc --noEmit",
+		"test:types": "tsc -p test/types/tsconfig.json",
+		"test": "npm run test:types",
+		"prepublishOnly": "npm run test && npm run build"
+	},
+	"keywords": [
+		"svelte",
+		"sveltekit",
+		"forms",
+		"discriminated-union",
+		"typescript"
+	],
+	"author": "",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": ""
+	},
+	"devDependencies": {
+		"typescript": "^5.0.0"
+	}
+}
