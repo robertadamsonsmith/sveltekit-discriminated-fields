@@ -26,11 +26,11 @@
 		"discriminated-union",
 		"typescript"
 	],
-	"author": "",
+	"author": "robertadamsonsmith",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": ""
+		"url": "https://github.com/robertadamsonsmith/sveltekit-discriminated-fields"
 	},
 	"devDependencies": {
 		"typescript": "^5.0.0"
