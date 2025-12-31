@@ -1,10 +1,10 @@
 # sveltekit-discriminated-fields
 
-Type-safe discriminated union support for SvelteKit form fields.
+Type-safe discriminated union support for SvelteKit remote function form fields.
 
 ## The Problem
 
-When using SvelteKit's `form()` with discriminated union schemas (e.g., Zod's `z.discriminatedUnion`), the generated `fields` object is a **union of field objects**. TypeScript only allows access to properties that exist on ALL variants - meaning variant-specific fields are completely inaccessible.
+When using SvelteKit's remote function `form()` with discriminated union schemas (e.g., Zod's `z.discriminatedUnion`), the generated `fields` object is a **union of field objects**. TypeScript only allows access to properties that exist on ALL variants - meaning variant-specific fields are completely inaccessible.
 
 Given a typical SvelteKit setup:
 
