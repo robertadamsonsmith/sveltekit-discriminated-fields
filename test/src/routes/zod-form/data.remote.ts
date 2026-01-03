@@ -5,23 +5,23 @@ import { form } from "$app/server";
 const shapeSchema = z.discriminatedUnion("kind", [
 	z.object({
 		kind: z.literal("circle"),
-		radius: z.coerce
+		radius: z
 			.number({ message: "Radius is required" })
 			.min(1, "Radius must be at least 1"),
 	}),
 	z.object({
 		kind: z.literal("rectangle"),
-		width: z.coerce
+		width: z
 			.number({ message: "Width is required" })
 			.min(1, "Width must be at least 1"),
-		height: z.coerce
+		height: z
 			.number({ message: "Height is required" })
 			.min(1, "Height must be at least 1"),
 	}),
 	z.object({
 		kind: z.literal("point"),
-		x: z.coerce.number({ message: "X coordinate is required" }),
-		y: z.coerce.number({ message: "Y coordinate is required" }),
+		x: z.number({ message: "X coordinate is required" }),
+		y: z.number({ message: "Y coordinate is required" }),
 	}),
 ], { errorMap: () => ({ message: "Please select a shape type" }) });
 
