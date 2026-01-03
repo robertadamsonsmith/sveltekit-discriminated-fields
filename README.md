@@ -34,8 +34,12 @@ import { z } from "zod";
 import { form } from "$app/server";
 
 const shapeSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("circle"), radius: z.coerce.number() }),
-  z.object({ kind: z.literal("rectangle"), width: z.coerce.number(), height: z.coerce.number() }),
+  z.object({ kind: z.literal("circle"), radius: z.number() }),
+  z.object({
+    kind: z.literal("rectangle"),
+    width: z.number(),
+    height: z.number(),
+  }),
   z.object({ kind: z.literal("point") }),
 ]);
 

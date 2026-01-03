@@ -8,17 +8,17 @@ import { form } from "$app/server";
 const shapeSchema = z.discriminatedUnion("kind", [
 	z.object({
 		kind: z.literal("circle"),
-		radius: z.coerce.number().min(1),
+		radius: z.number().min(1),
 	}),
 	z.object({
 		kind: z.literal("rectangle"),
-		width: z.coerce.number().min(1),
-		height: z.coerce.number().min(1),
+		width: z.number().min(1),
+		height: z.number().min(1),
 	}),
 	z.object({
 		kind: z.literal("point"),
-		x: z.coerce.number(),
-		y: z.coerce.number(),
+		x: z.number(),
+		y: z.number(),
 	}),
 ]);
 
@@ -152,7 +152,7 @@ const mixedTypeSchema = z.discriminatedUnion("format", [
 	}),
 	z.object({
 		format: z.literal("numeric"),
-		data: z.coerce.number(), // number type
+		data: z.number(), // number type
 	}),
 ]);
 

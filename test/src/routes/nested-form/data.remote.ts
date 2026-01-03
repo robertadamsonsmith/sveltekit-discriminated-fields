@@ -47,23 +47,23 @@ const productSchema = z.discriminatedUnion("type", [
 	z.object({
 		type: z.literal("physical"),
 		name: z.string().min(1, "Name is required"), // Common
-		price: z.coerce.number().min(0, "Price must be positive"), // Common
-		weight: z.coerce.number().min(0, "Weight must be positive"),
+		price: z.number().min(0, "Price must be positive"), // Common
+		weight: z.number().min(0, "Weight must be positive"),
 		dimensions: z.string().min(1, "Dimensions are required"),
 	}),
 	z.object({
 		type: z.literal("digital"),
 		name: z.string().min(1, "Name is required"), // Common
-		price: z.coerce.number().min(0, "Price must be positive"), // Common
+		price: z.number().min(0, "Price must be positive"), // Common
 		downloadUrl: z.string().url("Must be a valid URL"),
 		fileSize: z.string().min(1, "File size is required"),
 	}),
 	z.object({
 		type: z.literal("subscription"),
 		name: z.string().min(1, "Name is required"), // Common
-		price: z.coerce.number().min(0, "Price must be positive"), // Common (per month)
+		price: z.number().min(0, "Price must be positive"), // Common (per month)
 		billingCycle: z.enum(["monthly", "yearly"]),
-		trialDays: z.coerce.number().min(0),
+		trialDays: z.number().min(0),
 	}),
 ]);
 

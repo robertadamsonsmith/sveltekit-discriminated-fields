@@ -9,7 +9,7 @@ const notificationSchema = z.discriminatedUnion("type", [
 		type: z.literal("alert"),
 		// Inner discriminated union
 		severity: z.discriminatedUnion("level", [
-			z.object({ level: z.literal("warning"), dismissible: z.coerce.boolean() }),
+			z.object({ level: z.literal("warning"), dismissible: z.boolean() }),
 			z.object({ level: z.literal("error"), errorCode: z.string().min(1, "Error code is required") }),
 		]),
 	}),
