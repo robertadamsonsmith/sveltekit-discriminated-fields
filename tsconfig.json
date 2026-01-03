@@ -4,7 +4,9 @@
 		"module": "ESNext",
 		"moduleResolution": "bundler",
 		"strict": true,
-		"noEmit": true
+		"noEmit": true,
+		"verbatimModuleSyntax": true,
+		"types": ["svelte"]
 	},
 	"include": ["src"]
 }
