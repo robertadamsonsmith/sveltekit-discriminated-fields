@@ -1,5 +1,13 @@
 <script lang="ts">
-	import { shapeForm, paymentForm, statusForm, itemForm, badForm, mixedTypeForm } from "./data.remote";
+	import {
+		shapeForm,
+		paymentForm,
+		statusForm,
+		itemForm,
+		badForm,
+		mixedTypeForm,
+		nestedObjectForm,
+	} from "./data.remote";
 	import {
 		discriminatedFields,
 		UnionVariants,
@@ -217,6 +225,36 @@
 			item.description.value();
 		}
 	});
+
+	// =============================================================================
+	// Test 10: Nested objects within variants (recursive field building)
+	// =============================================================================
+
+	const nestedObj = $derived(discriminatedFields("type", nestedObjectForm.fields));
+
+	$effect(() => {
+		// 'name' is common to all variants
+		nestedObj.name.value();
+
+		if (nestedObj.typeValue === "person") {
+			// Should have access to nested address object with fields
+			nestedObj.address.street.value();
+			nestedObj.address.city.value();
+			nestedObj.address.zipCode.value();
+
+			// @ts-expect-error - headquarters doesn't exist on person
+			nestedObj.headquarters;
+		}
+
+		if (nestedObj.typeValue === "company") {
+			// Should have access to nested headquarters object with fields
+			nestedObj.headquarters.country.value();
+			nestedObj.headquarters.employees.value();
+
+			// @ts-expect-error - address doesn't exist on company
+			nestedObj.address;
+		}
+	});
 </script>
 
 <h1>Type Tests</h1>
@@ -390,3 +428,37 @@
 	Using it with <code>UnionVariants</code> produces a compile error.
 	See the <code>@ts-expect-error</code> test in the script section.
 </p>
+
+<!-- =============================================================================
+     Test 9: UnionVariants works with raw fields (not wrapped with discriminatedFields)
+     ============================================================================= -->
+
+<h2>Raw Fields (without discriminatedFields wrapper)</h2>
+<form {...shapeForm}>
+	<select {...shapeForm.fields.kind.as("select")}>
+		<option value="">Select...</option>
+		<option value="circle">Circle</option>
+		<option value="rectangle">Rectangle</option>
+		<option value="point">Point</option>
+	</select>
+
+	<UnionVariants fields={shapeForm.fields} key="kind">
+		{#snippet fallback()}
+			<p>Select a shape type</p>
+		{/snippet}
+
+		{#snippet circle(s)}
+			<input {...s.radius.as("number")} placeholder="radius" />
+		{/snippet}
+
+		{#snippet rectangle(s)}
+			<input {...s.width.as("number")} placeholder="width" />
+			<input {...s.height.as("number")} placeholder="height" />
+		{/snippet}
+
+		{#snippet point(s)}
+			<input {...s.x.as("number")} placeholder="x" />
+			<input {...s.y.as("number")} placeholder="y" />
+		{/snippet}
+	</UnionVariants>
+</form>

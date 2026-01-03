@@ -161,3 +161,36 @@ export type MixedTypeData = z.infer<typeof mixedTypeSchema>;
 export const mixedTypeForm = form(mixedTypeSchema, async (data) => {
 	return { success: true, data };
 });
+
+// =============================================================================
+// Schema 7: Nested objects within variants (test recursive field building)
+// =============================================================================
+
+const nestedObjectSchema = z.discriminatedUnion("type", [
+	z.object({
+		type: z.literal("person"),
+		name: z.string().min(1),
+		address: z.object({
+			street: z.string().min(1),
+			city: z.string().min(1),
+			zipCode: z.string().min(1),
+		}),
+	}),
+	z.object({
+		type: z.literal("company"),
+		name: z.string().min(1),
+		headquarters: z.object({
+			country: z.string().min(1),
+			employees: z.number().min(1),
+		}),
+	}),
+]);
+
+export type NestedObjectData = z.infer<typeof nestedObjectSchema>;
+
+export const nestedObjectForm = form(nestedObjectSchema, async (data) => {
+	if (data.type === "person") {
+		return { success: true, message: `Person: ${data.name} at ${data.address.city}` };
+	}
+	return { success: true, message: `Company: ${data.name} in ${data.headquarters.country}` };
+});

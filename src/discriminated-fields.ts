@@ -1,86 +1,84 @@
-import type { RemoteFormField, RemoteFormFieldType } from '@sveltejs/kit';
+import type { RemoteFormField, RemoteFormFields, RemoteFormFieldType, RemoteFormFieldValue } from '@sveltejs/kit';
+
+// =============================================================================
+// Core type extraction
+// =============================================================================
 
 // Data type from fields' set method
 export type DiscriminatedData<T> = T extends { set: (v: infer D) => unknown } ? D : never;
 
-// Extract discriminator values from the fields type
-type DiscriminatorValues<T, K extends string> = T extends Record<K, { value(): infer V }>
-	? Exclude<V, undefined>
+// Discriminator values from data type
+type DiscriminatorValues<K extends string, D> = D extends Record<K, infer V> ? Exclude<V, undefined> : never;
+
+// =============================================================================
+// Radio props - extracted from RemoteFormField.as("radio") return type
+// =============================================================================
+
+type RadioProps = RemoteFormField<string> extends { as(type: 'radio', value: string): infer R } ? R : never;
+
+// =============================================================================
+// Discriminator field - .as("radio") only accepts valid values
+// =============================================================================
+
+// Discriminator field with variant-specific value() but union-accepting .as("radio")
+type VariantDiscriminatorField<V extends string, AllV extends string> = Omit<RemoteFormField<V>, 'as'> & {
+	as(type: 'radio', value: AllV): RadioProps;
+	as(type: Exclude<RemoteFormFieldType<V>, 'radio'>, ...args: unknown[]): ReturnType<RemoteFormField<V>['as']>;
+};
+
+// =============================================================================
+// Build discriminated fields from data type
+// =============================================================================
+
+// =============================================================================
+// Nested field building - uses SvelteKit's RemoteFormFields
+// =============================================================================
+
+// Build field type - uses SvelteKit's RemoteFormFields for nested objects
+// This correctly includes set(), value(), issues(), allIssues() on nested containers
+type NestedField<V> = [V] extends [object]
+	? RemoteFormFields<V>
+	: RemoteFormField<V & RemoteFormFieldValue>;
+
+// =============================================================================
+// Variant fields
+// =============================================================================
+
+// Variant fields - distributes over D to build each variant
+// V is the specific variant value, AllV is all possible values (for .as("radio"))
+type VariantFields<K extends string, D, AllV extends string> = D extends Record<K, infer V>
+	? { readonly [P in `${K}Value`]: V } & { readonly [P in K]: VariantDiscriminatorField<V & string, AllV> } & {
+			readonly [P in Exclude<keyof D, K>]: NestedField<D[P & keyof D]>;
+		}
 	: never;
 
-// Extract value type from RemoteFormField (distributes over unions)
-type ExtractFieldValue<F> = F extends RemoteFormField<infer V> ? V : never;
-
-// Radio input element props (copied from SvelteKit's InputElementProps for 'radio')
-type RadioProps = {
-	name: string;
-	type: 'radio';
-	value?: string;
-	'aria-invalid': boolean | 'false' | 'true' | undefined;
-	get checked(): boolean;
-	set checked(value: boolean);
+// Undefined case (no variant selected yet) - includes common fields (keys in all variants)
+type UndefinedVariant<K extends string, D, AllV extends string> = { readonly [P in `${K}Value`]: undefined } & {
+	readonly [P in K]: VariantDiscriminatorField<AllV, AllV>;
+} & {
+	readonly [P in Exclude<keyof D, K>]: NestedField<D[P & keyof D]>;
 };
-
-// SvelteKit's AsArgs type for non-radio types
-type NonRadioAsArgs<Type extends string, Value> = Type extends 'checkbox'
-	? Value extends string[]
-		? [type: Type, value: Value[number] | (string & {})]
-		: [type: Type]
-	: Type extends 'submit' | 'hidden'
-		? [type: Type, value: Value | (string & {})]
-		: [type: Type];
-
-// Strict discriminator field type that overrides the .as() method
-// - Radio: strictly typed to only accept valid discriminator values (NO string escape hatch)
-// - Other types: use original SvelteKit behavior via the underlying RemoteFormField
-type StrictDiscriminatorField<Value extends string, BaseField extends RemoteFormField<Value>> = Omit<BaseField, 'as'> & {
-	// Strict radio overload - ONLY accepts valid discriminator values
-	as(type: 'radio', value: Value): RadioProps;
-	// All other input types - delegate to base RemoteFormField behavior
-	// Uses rest params with conditional type that excludes 'radio' from valid types
-	as<T extends Exclude<RemoteFormFieldType<Value>, 'radio'>>(
-		...args: NonRadioAsArgs<T, Value>
-	): ReturnType<BaseField['as']>;
-};
-
-// Convert union of RemoteFormFields to single StrictDiscriminatorField with union value
-type UnifyField<F, V extends string = ExtractFieldValue<F> & string> = StrictDiscriminatorField<V, RemoteFormField<V>>;
 
 // Type-safe set method
-type Setter<K extends string, T, D = DiscriminatedData<T>> = {
-	set: <V extends D[K & keyof D]>(data: Extract<D, { [P in K]: V }>) => void;
+type SetMethod<K extends string, D> = {
+	set: <V extends DiscriminatorValues<K, D>>(data: Extract<D, Record<K, V>>) => void;
 };
 
-// Distributes keyof over union
-type Keys<T> = T extends unknown ? keyof T : never;
+// Common methods - extracted from SvelteKit's RemoteFormFields
+// This ensures we stay in sync if SvelteKit changes the method signature
+type CommonMethods = RemoteFormFields<unknown> extends { allIssues: infer M } ? { allIssues: M } : never;
 
-// Discriminator value property
-type KeyValue<K extends string, V> = { [P in `${K}Value`]: V };
+// Full discriminated fields type
+type DiscriminatedFields<K extends string, D, AllV extends string = DiscriminatorValues<K, D> & string> = (
+	| VariantFields<K, D, AllV>
+	| UndefinedVariant<K, D, AllV>
+) &
+	SetMethod<K, D> &
+	CommonMethods;
 
-// All fields from T
-type Fields<T> = { [P in Keys<T>]: T extends Record<P, infer V> ? V : never };
-
-// Discriminator value + all fields
-type Variant<K extends string, T, V> = KeyValue<K, V> & Fields<T>;
-
-// Narrows T to each variant
-type Narrowed<K extends string, T> = T extends { [P in K]: { value(): infer V } }
-	? Variant<K, T, V>
-	: never;
-
-// Narrowed variants + undefined case
-type Union<K extends string, T> = Narrowed<K, T> | Variant<K, T, undefined>;
-
-// Extract discriminator field type from union without distribution
-type FieldUnion<K extends string, T> = T extends Record<K, infer F> ? F : never;
-
-// Unified discriminator field with strict .as("radio", value)
-type UnifiedDiscriminator<K extends string, T, F = FieldUnion<K, T>> = {
-	readonly [P in K]: [F] extends [never] ? never : UnifyField<F>;
-};
-
-// Set method + narrowed fields union + unified discriminator
-type DiscriminatedFields<K extends string, T> = Setter<K, T> & Union<K, T> & UnifiedDiscriminator<K, T>;
+// =============================================================================
+// Main function
+// =============================================================================
 
 /**
  * Wraps discriminated union form fields for type-safe access.
@@ -105,7 +103,7 @@ type DiscriminatedFields<K extends string, T> = Setter<K, T> & Union<K, T> & Uni
 export function discriminatedFields<
 	K extends string,
 	T extends { set: (v: never) => unknown } & Record<K, { value(): unknown; as(type: 'radio', value: string): object }>
->(key: K, fields: T): DiscriminatedFields<K, T> {
+>(key: K, fields: T): DiscriminatedFields<K, DiscriminatedData<T>> {
 	const proxy = new Proxy(fields, {
 		get(target, prop) {
 			if (prop === `${key}Value`) return target[key].value();
@@ -116,5 +114,5 @@ export function discriminatedFields<
 			return prop === `${key}Value` || prop in target;
 		}
 	});
-	return proxy as DiscriminatedFields<K, T>;
+	return proxy as DiscriminatedFields<K, DiscriminatedData<T>>;
 }
