@@ -2,30 +2,11 @@
 	let { children } = $props();
 </script>
 
-<nav>
-	<a href="/">Home</a>
-	<a href="/zod-form">Zod Form</a>
-	<a href="/valibot-form">Valibot Form</a>
-	<a href="/radio-form">Radio Form</a>
-	<a href="/programmatic-form">Programmatic</a>
-	<a href="/selector-form">Selector</a>
-	<a href="/selector-radio-form">Selector Radio</a>
-	<a href="/edge-cases">Edge Cases</a>
-	<a href="/type-tests">Type Tests</a>
-</nav>
-
 <main>
 	{@render children()}
 </main>
 
 <style>
-	nav {
-		display: flex;
-		gap: 1rem;
-		padding: 1rem;
-		background: #f0f0f0;
-		flex-wrap: wrap;
-	}
 	main {
 		padding: 1rem;
 	}
