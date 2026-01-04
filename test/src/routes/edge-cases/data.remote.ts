@@ -19,6 +19,15 @@ const edgeCaseSchema = z.discriminatedUnion("variant", [
 
 export type EdgeCaseData = z.infer<typeof edgeCaseSchema>;
 
+// Separate forms for each test section to ensure form isolation
+export const partialForm = form(edgeCaseSchema, async () => {
+	return { success: true, message: "Partial form submitted" };
+});
+
+export const noFallbackForm = form(edgeCaseSchema, async () => {
+	return { success: true, message: "No fallback form submitted" };
+});
+
 export const edgeCaseForm = form(edgeCaseSchema, async (data) => {
 	let description: string;
 

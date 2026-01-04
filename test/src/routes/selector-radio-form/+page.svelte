@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { shippingForm } from "./data.remote";
-	import { UnionVariants, discriminatedFields } from "sveltekit-discriminated-fields";
+	import { FieldVariants, discriminated } from "sveltekit-discriminated-fields";
 
-	const shipping = $derived(discriminatedFields("speed", shippingForm.fields));
+	const shipping = $derived(discriminated("speed", shippingForm.fields));
 </script>
 
-<h1>Selector Prop with Radio Buttons</h1>
-<p>This page tests the <code>selector</code> prop with radio buttons in a non-sibling layout.</p>
+<h1>Radio Buttons with Non-Sibling Layout</h1>
+<p>This page tests FieldVariants with radio buttons in a non-sibling DOM layout.</p>
 
 <form {...shippingForm} id="shipping-form">
 	<div class="form-header">
 		<h2>Shipping Options</h2>
-		<!-- Radio buttons are in a fieldset with an id -->
+		<!-- Radio buttons are in a fieldset -->
 		<fieldset id="speed-options" data-testid="speed-options">
 			<legend>Select Speed:</legend>
 			<label>
@@ -26,33 +26,32 @@
 	</div>
 
 	<div class="form-body">
-		<!-- Variants are in a different branch, using selector to find the fieldset -->
+		<!-- Variants are in a different branch - form:has() handles this -->
 		<div class="fields-container">
-			<UnionVariants
+			<FieldVariants
 				fields={shippingForm.fields}
 				key="speed"
-				selector="#speed-options"
 			>
-				{#snippet fallback()}
-					<p data-testid="fallback">Please select a shipping speed above.</p>
+				{#snippet fallback(props)}
+					<p {...props} data-testid="fallback">Please select a shipping speed above.</p>
 				{/snippet}
-				{#snippet standard(fields)}
-					<div data-testid="standard-fields">
+				{#snippet standard(v)}
+					<div {...v} data-testid="standard-fields">
 						<label>
 							Estimated Days:
-							<input {...fields.estimatedDays.as("text")} data-testid="days-input" />
+							<input {...v.fields.estimatedDays.as("text")} data-testid="days-input" />
 						</label>
 					</div>
 				{/snippet}
-				{#snippet express(fields)}
-					<div data-testid="express-fields">
+				{#snippet express(v)}
+					<div {...v} data-testid="express-fields">
 						<label>
 							Tracking ID:
-							<input {...fields.trackingId.as("text")} data-testid="tracking-input" />
+							<input {...v.fields.trackingId.as("text")} data-testid="tracking-input" />
 						</label>
 					</div>
 				{/snippet}
-			</UnionVariants>
+			</FieldVariants>
 		</div>
 	</div>
 

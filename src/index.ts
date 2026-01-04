@@ -1,6 +1,6 @@
-// Re-export discriminatedFields function and types
-export { discriminatedFields, type DiscriminatedData } from './discriminated-fields.js';
+// Re-export discriminated function and types
+export { discriminated, type DiscriminatedData } from './discriminated.js';
 
-// Re-export UnionVariants component and its types
-export { default as UnionVariants } from './UnionVariants.svelte';
-export type { UnionVariantsProps } from './UnionVariants.svelte';
+// Re-export FieldVariants component and its types
+export { default as FieldVariants } from './FieldVariants.svelte';
+export type { FieldVariantsProps, VariantProps, VariantSnippetArg } from './FieldVariants.svelte';

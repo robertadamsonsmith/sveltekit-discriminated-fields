@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { notificationForm } from "./data.remote";
-	import { discriminatedFields } from "sveltekit-discriminated-fields";
+	import { discriminated } from "sveltekit-discriminated-fields";
 
-	const notification = $derived(discriminatedFields("channel", notificationForm.fields));
+	const notification = $derived(discriminated("channel", notificationForm.fields));
 
 	// Test: programmatic set() for each variant
 	function setEmail() {
@@ -53,7 +53,7 @@
 		Current channel: <strong>{notification.channelValue ?? "none"}</strong>
 	</p>
 
-	<!-- Test: using discriminatedFields without UnionVariants -->
+	<!-- Test: using discriminated without FieldVariants -->
 	{#if notification.channelValue === "email"}
 		<div data-testid="email-fields">
 			<label>

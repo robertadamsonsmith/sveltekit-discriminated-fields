@@ -9,8 +9,8 @@
 		nestedObjectForm,
 	} from "./data.remote";
 	import {
-		discriminatedFields,
-		UnionVariants,
+		discriminated,
+		FieldVariants,
 		type DiscriminatedData,
 	} from "sveltekit-discriminated-fields";
 
@@ -19,10 +19,10 @@
 	// 'notes' exists in 'a' and 'b' but not 'c' - this is invalid
 	// =============================================================================
 
-	import type { UnionVariantsProps } from "sveltekit-discriminated-fields";
+	import type { FieldVariantsProps } from "sveltekit-discriminated-fields";
 
 	// This type should resolve to an error string, not the fields type
-	type BadFieldsValidation = UnionVariantsProps<"type", typeof badForm.fields>["fields"];
+	type BadFieldsValidation = FieldVariantsProps<"type", typeof badForm.fields>["fields"];
 
 	// @ts-expect-error - BadFieldsValidation is an error string, not assignable to fields
 	const _badTest: BadFieldsValidation = badForm.fields;
@@ -34,17 +34,17 @@
 
 	// Get the type that the book snippet receives
 	type BookSnippetParam = Parameters<
-		NonNullable<UnionVariantsProps<"category", typeof itemForm.fields>["book"]>
+		NonNullable<FieldVariantsProps<"category", typeof itemForm.fields>["book"]>
 	>[0];
 
 	// Simulate accessing description from within a snippet - should ERROR
 	const _snippetParam = {} as BookSnippetParam;
 	// @ts-expect-error - description should NOT be accessible from within snippet (common fields are excluded)
-	_snippetParam.description;
+	_snippetParam.fields.description;
 
-	// Verify that variant-specific fields ARE accessible
-	_snippetParam.author; // OK - book-specific field
-	_snippetParam.isbn; // OK - book-specific field
+	// Verify that variant-specific fields ARE accessible via .fields
+	_snippetParam.fields.author; // OK - book-specific field
+	_snippetParam.fields.isbn; // OK - book-specific field
 
 	// =============================================================================
 	// Test 8: Same field name but DIFFERENT types across variants should ERROR
@@ -52,7 +52,7 @@
 	// =============================================================================
 
 	// This type should resolve to an error string because 'data' has different types
-	type MixedTypeValidation = UnionVariantsProps<"format", typeof mixedTypeForm.fields>["fields"];
+	type MixedTypeValidation = FieldVariantsProps<"format", typeof mixedTypeForm.fields>["fields"];
 
 	// @ts-expect-error - MixedTypeValidation is an error string, not assignable to fields
 	const _mixedTypeTest: MixedTypeValidation = mixedTypeForm.fields;
@@ -65,7 +65,7 @@
 	// We'll test that invalid values are rejected
 
 	// First, create the discriminated fields (we'll use it for the test)
-	const shapeForRadioTest = $derived(discriminatedFields("kind", shapeForm.fields));
+	const shapeForRadioTest = $derived(discriminated("kind", shapeForm.fields));
 
 	$effect(() => {
 		// Valid calls - these should compile without error
@@ -84,10 +84,10 @@
 	});
 
 	// =============================================================================
-	// Test 1: discriminatedFields() with 'kind' discriminator
+	// Test 1: discriminated() with 'kind' discriminator
 	// =============================================================================
 
-	const shape = $derived(discriminatedFields("kind", shapeForm.fields));
+	const shape = $derived(discriminated("kind", shapeForm.fields));
 
 	// Type extraction test - this is compile-time only
 	type ExtractedShapeData = DiscriminatedData<typeof shape>;
@@ -126,10 +126,10 @@
 	});
 
 	// =============================================================================
-	// Test 2: discriminatedFields() with 'type' discriminator
+	// Test 2: discriminated() with 'type' discriminator
 	// =============================================================================
 
-	const payment = $derived(discriminatedFields("type", paymentForm.fields));
+	const payment = $derived(discriminated("type", paymentForm.fields));
 
 	$effect(() => {
 		// Test: typeValue (not kindValue) when discriminator is 'type'
@@ -182,7 +182,7 @@
 	// Test 4: Variant with no extra fields (status: inactive)
 	// =============================================================================
 
-	const status = $derived(discriminatedFields("status", statusForm.fields));
+	const status = $derived(discriminated("status", statusForm.fields));
 
 	$effect(() => {
 		if (status.statusValue === "active") {
@@ -212,7 +212,7 @@
 	// Test 5: Common fields across ALL variants (should be allowed)
 	// =============================================================================
 
-	const item = $derived(discriminatedFields("category", itemForm.fields));
+	const item = $derived(discriminated("category", itemForm.fields));
 
 	$effect(() => {
 		// 'description' is common to all variants - always accessible
@@ -230,7 +230,7 @@
 	// Test 10: Nested objects within variants (recursive field building)
 	// =============================================================================
 
-	const nestedObj = $derived(discriminatedFields("type", nestedObjectForm.fields));
+	const nestedObj = $derived(discriminated("type", nestedObjectForm.fields));
 
 	$effect(() => {
 		// 'name' is common to all variants
@@ -265,7 +265,7 @@
 </p>
 
 <!-- =============================================================================
-     Test 5: UnionVariants component type inference in templates
+     Test 5: FieldVariants component type inference in templates
      ============================================================================= -->
 
 <h2>Shape Form (kind discriminator)</h2>
@@ -277,28 +277,32 @@
 		<option value="point">Point</option>
 	</select>
 
-	<UnionVariants fields={shape} key="kind">
-		{#snippet fallback()}
-			<p>Select a shape type</p>
+	<FieldVariants fields={shape} key="kind">
+		{#snippet fallback(props)}
+			<p {...props}>Select a shape type</p>
 		{/snippet}
 
-		{#snippet circle(s)}
-			<!-- s is correctly typed with radius field -->
-			<input {...s.radius.as("number")} placeholder="radius" />
+		{#snippet circle(v)}
+			<!-- v.fields is correctly typed with radius field -->
+			<input {...v} {...v.fields.radius.as("number")} placeholder="radius" />
 		{/snippet}
 
-		{#snippet rectangle(s)}
-			<!-- s is correctly typed with width and height fields -->
-			<input {...s.width.as("number")} placeholder="width" />
-			<input {...s.height.as("number")} placeholder="height" />
+		{#snippet rectangle(v)}
+			<!-- v.fields is correctly typed with width and height fields -->
+			<div {...v}>
+				<input {...v.fields.width.as("number")} placeholder="width" />
+				<input {...v.fields.height.as("number")} placeholder="height" />
+			</div>
 		{/snippet}
 
-		{#snippet point(s)}
-			<!-- s is correctly typed with x and y fields -->
-			<input {...s.x.as("number")} placeholder="x" />
-			<input {...s.y.as("number")} placeholder="y" />
+		{#snippet point(v)}
+			<!-- v.fields is correctly typed with x and y fields -->
+			<div {...v}>
+				<input {...v.fields.x.as("number")} placeholder="x" />
+				<input {...v.fields.y.as("number")} placeholder="y" />
+			</div>
 		{/snippet}
-	</UnionVariants>
+	</FieldVariants>
 </form>
 
 <h2>Payment Form (type discriminator)</h2>
@@ -310,25 +314,29 @@
 		<option value="cash">Cash</option>
 	</select>
 
-	<UnionVariants fields={payment} key="type">
-		{#snippet fallback()}
-			<p>Select a payment type</p>
+	<FieldVariants fields={payment} key="type">
+		{#snippet fallback(props)}
+			<p {...props}>Select a payment type</p>
 		{/snippet}
 
-		{#snippet card(p)}
-			<input {...p.cardNumber.as("text")} placeholder="card number" />
-			<input {...p.cvv.as("text")} placeholder="cvv" />
+		{#snippet card(v)}
+			<div {...v}>
+				<input {...v.fields.cardNumber.as("text")} placeholder="card number" />
+				<input {...v.fields.cvv.as("text")} placeholder="cvv" />
+			</div>
 		{/snippet}
 
-		{#snippet bank(p)}
-			<input {...p.accountNumber.as("text")} placeholder="account" />
-			<input {...p.sortCode.as("text")} placeholder="sort code" />
+		{#snippet bank(v)}
+			<div {...v}>
+				<input {...v.fields.accountNumber.as("text")} placeholder="account" />
+				<input {...v.fields.sortCode.as("text")} placeholder="sort code" />
+			</div>
 		{/snippet}
 
-		{#snippet cash(_p)}
-			<p>No additional fields for cash</p>
+		{#snippet cash(v)}
+			<p {...v}>No additional fields for cash</p>
 		{/snippet}
-	</UnionVariants>
+	</FieldVariants>
 </form>
 
 <h2>Status Form (variant with no extra fields)</h2>
@@ -340,23 +348,23 @@
 		<option value="pending">Pending</option>
 	</select>
 
-	<UnionVariants fields={status} key="status">
-		{#snippet fallback()}
-			<p>Select a status</p>
+	<FieldVariants fields={status} key="status">
+		{#snippet fallback(props)}
+			<p {...props}>Select a status</p>
 		{/snippet}
 
-		{#snippet active(s)}
-			<input {...s.lastSeen.as("text")} placeholder="last seen" />
+		{#snippet active(v)}
+			<input {...v} {...v.fields.lastSeen.as("text")} placeholder="last seen" />
 		{/snippet}
 
-		{#snippet inactive(_s)}
-			<p>No additional fields for inactive status</p>
+		{#snippet inactive(v)}
+			<p {...v}>No additional fields for inactive status</p>
 		{/snippet}
 
-		{#snippet pending(s)}
-			<input {...s.waitingSince.as("text")} placeholder="waiting since" />
+		{#snippet pending(v)}
+			<input {...v} {...v.fields.waitingSince.as("text")} placeholder="waiting since" />
 		{/snippet}
-	</UnionVariants>
+	</FieldVariants>
 </form>
 
 <!-- =============================================================================
@@ -364,17 +372,17 @@
      ============================================================================= -->
 
 <h2>Partial Variants (only circle and rectangle)</h2>
-<UnionVariants fields={shape} key="kind" partial={true}>
-	{#snippet circle(s)}
-		<input {...s.radius.as("number")} />
+<FieldVariants fields={shape} key="kind" partial={true}>
+	{#snippet circle(v)}
+		<input {...v} {...v.fields.radius.as("number")} />
 	{/snippet}
 
-	{#snippet rectangle(s)}
-		<input {...s.width.as("number")} />
+	{#snippet rectangle(v)}
+		<input {...v} {...v.fields.width.as("number")} />
 	{/snippet}
 
 	<!-- point snippet intentionally missing - allowed with partial={true} -->
-</UnionVariants>
+</FieldVariants>
 
 <!-- =============================================================================
      Test 7: Common fields across ALL variants (should be allowed)
@@ -382,7 +390,7 @@
 
 <h2>Common Fields (description in all variants)</h2>
 <form {...itemForm}>
-	<!-- Common field can be used OUTSIDE UnionVariants -->
+	<!-- Common field can be used OUTSIDE FieldVariants -->
 	<label>
 		Description (common to all):
 		<input {...item.description.as("text")} placeholder="description" />
@@ -395,27 +403,27 @@
 		<option value="clothing">Clothing</option>
 	</select>
 
-	<!-- UnionVariants should work - common fields are allowed -->
-	<UnionVariants fields={item} key="category">
+	<!-- FieldVariants should work - common fields are allowed -->
+	<FieldVariants fields={item} key="category">
 		{#snippet fallback()}
 			<p>Select a category</p>
 		{/snippet}
 
-		{#snippet book(i)}
-			<input {...i.author.as("text")} placeholder="author" />
-			<input {...i.isbn.as("text")} placeholder="isbn" />
+		{#snippet book(v)}
+			<input {...v} {...v.fields.author.as("text")} placeholder="author" />
+			<input {...v.fields.isbn.as("text")} placeholder="isbn" />
 		{/snippet}
 
-		{#snippet electronics(i)}
-			<input {...i.brand.as("text")} placeholder="brand" />
-			<input {...i.warranty.as("text")} placeholder="warranty" />
+		{#snippet electronics(v)}
+			<input {...v} {...v.fields.brand.as("text")} placeholder="brand" />
+			<input {...v.fields.warranty.as("text")} placeholder="warranty" />
 		{/snippet}
 
-		{#snippet clothing(i)}
-			<input {...i.size.as("text")} placeholder="size" />
-			<input {...i.color.as("text")} placeholder="color" />
+		{#snippet clothing(v)}
+			<input {...v} {...v.fields.size.as("text")} placeholder="size" />
+			<input {...v.fields.color.as("text")} placeholder="color" />
 		{/snippet}
-	</UnionVariants>
+	</FieldVariants>
 </form>
 
 <!-- =============================================================================
@@ -425,15 +433,15 @@
 <h2>Partially Shared Fields (compile error expected)</h2>
 <p>
 	The <code>badForm</code> schema has 'notes' in variants 'a' and 'b' but not 'c'.
-	Using it with <code>UnionVariants</code> produces a compile error.
+	Using it with <code>FieldVariants</code> produces a compile error.
 	See the <code>@ts-expect-error</code> test in the script section.
 </p>
 
 <!-- =============================================================================
-     Test 9: UnionVariants works with raw fields (not wrapped with discriminatedFields)
+     Test 9: FieldVariants works with raw fields (not wrapped with discriminated)
      ============================================================================= -->
 
-<h2>Raw Fields (without discriminatedFields wrapper)</h2>
+<h2>Raw Fields (without discriminated wrapper)</h2>
 <form {...shapeForm}>
 	<select {...shapeForm.fields.kind.as("select")}>
 		<option value="">Select...</option>
@@ -442,23 +450,23 @@
 		<option value="point">Point</option>
 	</select>
 
-	<UnionVariants fields={shapeForm.fields} key="kind">
+	<FieldVariants fields={shapeForm.fields} key="kind">
 		{#snippet fallback()}
 			<p>Select a shape type</p>
 		{/snippet}
 
-		{#snippet circle(s)}
-			<input {...s.radius.as("number")} placeholder="radius" />
+		{#snippet circle(v)}
+			<input {...v} {...v.fields.radius.as("number")} placeholder="radius" />
 		{/snippet}
 
-		{#snippet rectangle(s)}
-			<input {...s.width.as("number")} placeholder="width" />
-			<input {...s.height.as("number")} placeholder="height" />
+		{#snippet rectangle(v)}
+			<input {...v} {...v.fields.width.as("number")} placeholder="width" />
+			<input {...v.fields.height.as("number")} placeholder="height" />
 		{/snippet}
 
-		{#snippet point(s)}
-			<input {...s.x.as("number")} placeholder="x" />
-			<input {...s.y.as("number")} placeholder="y" />
+		{#snippet point(v)}
+			<input {...v} {...v.fields.x.as("number")} placeholder="x" />
+			<input {...v.fields.y.as("number")} placeholder="y" />
 		{/snippet}
-	</UnionVariants>
+	</FieldVariants>
 </form>

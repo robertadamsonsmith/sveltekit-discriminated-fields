@@ -70,7 +70,7 @@
   // =============================================================================
 
   // Reserved prop names
-  type Reserved = "fields" | "key" | "fallback" | "partial" | "selector";
+  type Reserved = "fields" | "key" | "fallback" | "partial" | "css";
 
   // Build field type - uses SvelteKit's RemoteFormFields for nested objects
   // This correctly includes set(), value(), issues(), allIssues() on nested containers
@@ -85,16 +85,23 @@
     readonly [P in K]: Field<V>;
   };
 
-  // Snippet props - one snippet per variant
+  // Props passed to variant snippets for CSS targeting (spread onto wrapper element)
+  export type VariantProps = { "data-fv"?: string };
+
+  // Combined variant snippet argument - spread for props, access .fields for variant data
+  // Mirrors form pattern: <form {...form}> + form.fields.x → <div {...v}> + v.fields.x
+  export type VariantSnippetArg<F> = VariantProps & { readonly fields: F };
+
+  // Snippet props - one snippet per variant, receives single arg with .fields property
   type Snippets<K extends string, D, V extends string, IsPartial extends boolean> = IsPartial extends true
-    ? { [P in Exclude<V, Reserved>]?: Snippet<[SnippetFields<K, D, P>]> }
-    : { [P in Exclude<V, Reserved>]: Snippet<[SnippetFields<K, D, P>]> };
+    ? { [P in Exclude<V, Reserved>]?: Snippet<[VariantSnippetArg<SnippetFields<K, D, P>>]> }
+    : { [P in Exclude<V, Reserved>]: Snippet<[VariantSnippetArg<SnippetFields<K, D, P>>]> };
 
   // =============================================================================
   // Component props
   // =============================================================================
 
-  export type UnionVariantsProps<
+  export type FieldVariantsProps<
     K extends string,
     T extends { set: (v: never) => unknown } & Record<K, { value(): unknown }>,
     V extends string = Values<K, Data<T>>,
@@ -102,16 +109,12 @@
   > = {
     fields: Validate<K, Data<T>, T>;
     key: K;
-    /** Optional snippet shown when no variant is selected */
-    fallback?: Snippet;
+    /** Optional snippet shown when no variant is selected. Receives (props) for CSS targeting. */
+    fallback?: Snippet<[VariantProps]>;
     /** When true, variant snippets are optional (default: false) */
     partial?: IsPartial;
-    /**
-     * CSS selector for the discriminator input element (select or radio container).
-     * When provided, uses this selector instead of the default name-based lookup.
-     * Example: "#method-select" for a select, or "#radio-group" for radios
-     */
-    selector?: string;
+    /** Set to false to disable CSS generation (default: true) */
+    css?: boolean;
   } & Snippets<K, Data<T>, V, IsPartial>;
 </script>
 
@@ -119,92 +122,113 @@
   lang="ts"
   generics="K extends string, T extends { set: (v: never) => unknown } & Record<K, { value(): unknown }>, V extends string = Values<K, Data<T>>, IsPartial extends boolean = false"
 >
-  type Props = UnionVariantsProps<K, T, V, IsPartial>;
+  import { onMount } from "svelte";
 
-  let { fields, key, fallback, partial, selector, ...snippets }: Props = $props();
+  type Props = FieldVariantsProps<K, T, V, IsPartial>;
+
+  let { fields, key, fallback, partial, css: cssEnabled = true, ...snippets }: Props = $props();
 
   // Get all variant values from the snippet names
   const variantValues = Object.keys(snippets) as V[];
 
-  // Get the actual field name from the discriminator field
+  // After hydration, switch from CSS-only to JS-based conditional rendering
+  // This enables Svelte transitions and other JS-dependent features
+  let hydrated = $state(false);
+  onMount(() => {
+    hydrated = true;
+  });
+
+  // Get the current discriminator value
+  const currentValue = $derived.by(() => {
+    const discriminatorField = (fields as Record<K, { value(): unknown }>)[key];
+    return discriminatorField?.value() as V | "" | undefined;
+  });
+
+  // Get the actual field name from the discriminator field (used for CSS selectors)
   const fieldName = $derived.by(() => {
     const discriminatorField = (fields as Record<K, { as(type: "select"): { name: string } }>)[key];
     return discriminatorField?.as("select")?.name ?? key;
   });
 
   // Generate CSS for showing/hiding variants based on select or radio value
+  // Uses form:has() to scope to the containing form - works regardless of DOM structure
   const css = $derived.by(() => {
-    const attr = `data-union-${key}`;
+    if (!cssEnabled) return "";
+
     const name = fieldName;
+    // Use .fieldName.variant format - the leading dot prevents collisions
+    const fv = (v: string) => `[data-fv=".${name}.${v}"]`;
+    const fvPrefix = `[data-fv^=".${name}."]`;
 
-    if (selector) {
-      // Selector-based: use :has() with the provided selector to find any ancestor
-      // Supports: select elements, radio inputs directly, or radio containers
-      const selOpt = (v: string) => `*:has(${selector} option[value="${v}"]:checked)`;
-      const radDirect = (v: string) => `*:has(${selector}[value="${v}"]:checked)`;
-      const radContainer = (v: string) => `*:has(${selector} input[value="${v}"]:checked)`;
+    // form:has() scopes to the containing form, name-based targeting is precise
+    const sel = (v: string) => `form:has(select[name="${name}"] option[value="${v}"]:checked)`;
+    const rad = (v: string) => `form:has(input[name="${name}"][value="${v}"]:checked)`;
 
-      // Hide all variant sections by default
-      const hideAll = `*:has(${selector}) [${attr}]:not([${attr}="fallback"]) { display: none; }\n`;
-
-      // Show the variant section that matches the selected value
-      const showVariants = variantValues
-        .map((v) => `${selOpt(v)} [${attr}="${v}"],
-${radDirect(v)} [${attr}="${v}"],
-${radContainer(v)} [${attr}="${v}"] { display: contents; }`)
-        .join("\n");
-
-      // Hide fallback when any variant is selected
-      const hideFallback =
-        fallback && variantValues.length
-          ? `*:has(${selector}:checked) [${attr}="fallback"],
-*:has(${selector} input:checked) [${attr}="fallback"],
-${variantValues.map((v) => `${selOpt(v)} [${attr}="fallback"]`).join(",\n")} { display: none; }\n`
-          : "";
-
-      return hideAll + showVariants + hideFallback;
-    }
-
-    // Sibling-based (default): look for sibling elements containing the discriminator
-    const sel = (s: string) => `*:has(select[name="${name}"]${s}) ~`;
-    const rad = (s: string) => `*:has(input[name="${name}"]${s}) ~`;
-
-    // Hide all variant sections by default (but not fallback)
-    const hideAll = `${sel("")} [${attr}]:not([${attr}="fallback"]),
-${rad("")} [${attr}]:not([${attr}="fallback"]) { display: none; }\n`;
+    // Hide all variant sections by default (starts-with selector matches all variants for this field)
+    const hideAll = `form:has([name="${name}"]) ${fvPrefix}:not(${fv("fallback")}) { display: none; }\n`;
 
     // Show the variant section that matches the selected value
     const showVariants = variantValues
-      .map((v) => `${sel(` option[value="${v}"]:checked`)} [${attr}="${v}"],
-${rad(`[value="${v}"]:checked`)} [${attr}="${v}"] { display: contents; }`)
+      .map((v) => `${sel(v)} ${fv(v)},
+${rad(v)} ${fv(v)} { display: contents; }`)
       .join("\n");
 
-    // Hide fallback when any variant is selected
-    const hideFallback =
-      fallback && variantValues.length
-        ? `${rad(":checked")} [${attr}="fallback"],
-${variantValues.map((v) => `${sel(` option[value="${v}"]:checked`)} [${attr}="fallback"]`).join(",\n")} { display: none; }\n`
-        : "";
+    // Hide fallback when ANY value is selected (not just known variants)
+    // This checks for any non-empty option selected or any radio checked
+    const hideFallback = fallback
+      ? `form:has(select[name="${name}"] option:checked:not([value=""])) ${fv("fallback")},
+form:has(input[name="${name}"]:checked) ${fv("fallback")} { display: none; }\n`
+      : "";
 
     return hideAll + showVariants + hideFallback;
   });
+
+  // Props to add to wrapper elements when CSS is enabled - uses .fieldName.variant format
+  const wrapperProps = (variant: string): VariantProps =>
+    cssEnabled ? { "data-fv": `.${fieldName}.${variant}` } : {};
+
+  // Create snippet argument with non-enumerable fields property
+  // This allows {...v} to only spread the CSS props, while v.fields is still accessible
+  const createSnippetArg = (variant: string, variantFields: T): VariantSnippetArg<T> => {
+    const arg = { ...wrapperProps(variant) };
+    Object.defineProperty(arg, "fields", {
+      value: variantFields,
+      enumerable: false,
+      configurable: false,
+      writable: false,
+    });
+    return arg as VariantSnippetArg<T>;
+  };
 </script>
 
 <svelte:head>
-  {@html `<style>${css}</style>`}
+  {#if css && !hydrated}
+    <!-- CSS-only visibility before JS hydrates -->
+    {@html `<style>${css}</style>`}
+  {/if}
 </svelte:head>
 
-{#if fallback}
-  {@const attrs = { [`data-union-${key}`]: "fallback" }}
-  <div {...attrs}>
-    {@render fallback()}
-  </div>
-{/if}
+{#if hydrated}
+  <!-- After hydration: JS-based conditional rendering (enables transitions) -->
+  <!-- Fallback shows when no value is selected (empty string or undefined) -->
+  {#if !currentValue && fallback}
+    {@render fallback(wrapperProps("fallback"))}
+  {/if}
 
-{#each variantValues as v (v)}
-  {@const snippet = (snippets as unknown as Record<V, Snippet<[T]>>)[v]}
-  {@const attrs = { [`data-union-${key}`]: v }}
-  <div {...attrs}>
-    {@render snippet(fields as T)}
-  </div>
-{/each}
+  {#each variantValues as v (v)}
+    {#if currentValue === v}
+      {@const snippet = (snippets as unknown as Record<V, Snippet<[VariantSnippetArg<T>]>>)[v]}
+      {@render snippet(createSnippetArg(v, fields as T))}
+    {/if}
+  {/each}
+{:else}
+  <!-- Before hydration: render all, CSS handles visibility -->
+  {#if fallback}
+    {@render fallback(wrapperProps("fallback"))}
+  {/if}
+
+  {#each variantValues as v (v)}
+    {@const snippet = (snippets as unknown as Record<V, Snippet<[VariantSnippetArg<T>]>>)[v]}
+    {@render snippet(createSnippetArg(v, fields as T))}
+  {/each}
+{/if}

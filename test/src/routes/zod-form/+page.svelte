@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { shapeForm } from "./data.remote";
-	import { discriminatedFields, UnionVariants } from "sveltekit-discriminated-fields";
+	import { discriminated, FieldVariants } from "sveltekit-discriminated-fields";
 
-	const shape = $derived(discriminatedFields("kind", shapeForm.fields));
+	const shape = $derived(discriminated("kind", shapeForm.fields));
 </script>
 
 <h1>Zod Discriminated Union Form</h1>
@@ -18,40 +18,44 @@
 		</select>
 	</label>
 
-	<UnionVariants fields={shape} key="kind">
-		{#snippet fallback()}
-			<p>Please select a shape type above.</p>
+	<FieldVariants fields={shape} key="kind">
+		{#snippet fallback(props)}
+			<p {...props}>Please select a shape type above.</p>
 		{/snippet}
 
-		{#snippet circle(s)}
-			<label>
+		{#snippet circle(v)}
+			<label {...v}>
 				Radius:
-				<input {...s.radius.as("number")} />
+				<input {...v.fields.radius.as("number")} />
 			</label>
 		{/snippet}
 
-		{#snippet rectangle(s)}
-			<label>
-				Width:
-				<input {...s.width.as("number")} />
-			</label>
-			<label>
-				Height:
-				<input {...s.height.as("number")} />
-			</label>
+		{#snippet rectangle(v)}
+			<div {...v}>
+				<label>
+					Width:
+					<input {...v.fields.width.as("number")} />
+				</label>
+				<label>
+					Height:
+					<input {...v.fields.height.as("number")} />
+				</label>
+			</div>
 		{/snippet}
 
-		{#snippet point(s)}
-			<label>
-				X:
-				<input {...s.x.as("number")} />
-			</label>
-			<label>
-				Y:
-				<input {...s.y.as("number")} />
-			</label>
+		{#snippet point(v)}
+			<div {...v}>
+				<label>
+					X:
+					<input {...v.fields.x.as("number")} />
+				</label>
+				<label>
+					Y:
+					<input {...v.fields.y.as("number")} />
+				</label>
+			</div>
 		{/snippet}
-	</UnionVariants>
+	</FieldVariants>
 
 	{#if shape.allIssues()?.length}
 		<div class="message error">

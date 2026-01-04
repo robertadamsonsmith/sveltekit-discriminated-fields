@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { priorityForm } from "./data.remote";
-	import { discriminatedFields, UnionVariants } from "sveltekit-discriminated-fields";
+	import { discriminated, FieldVariants } from "sveltekit-discriminated-fields";
 
-	const priority = $derived(discriminatedFields("level", priorityForm.fields));
+	const priority = $derived(discriminated("level", priorityForm.fields));
 
 	// =============================================================================
 	// Type Tests: .as("radio", value) is properly typed for discriminator fields
@@ -41,29 +41,29 @@
 		</label>
 	</fieldset>
 
-	<UnionVariants fields={priority} key="level">
-		{#snippet fallback()}
-			<p>Please select a priority level above.</p>
+	<FieldVariants fields={priority} key="level">
+		{#snippet fallback(props)}
+			<p {...props}>Please select a priority level above.</p>
 		{/snippet}
 
-		{#snippet high(p)}
-			<label>
+		{#snippet high(v)}
+			<label {...v}>
 				Deadline:
-				<input {...p.deadline.as("text")} placeholder="Enter deadline" />
+				<input {...v.fields.deadline.as("text")} placeholder="Enter deadline" />
 			</label>
 		{/snippet}
 
-		{#snippet medium(p)}
-			<label>
+		{#snippet medium(v)}
+			<label {...v}>
 				Notes (optional):
-				<input {...p.notes.as("text")} placeholder="Any notes?" />
+				<input {...v.fields.notes.as("text")} placeholder="Any notes?" />
 			</label>
 		{/snippet}
 
-		{#snippet low(_p)}
-			<p>No additional information needed for low priority.</p>
+		{#snippet low(v)}
+			<p {...v}>No additional information needed for low priority.</p>
 		{/snippet}
-	</UnionVariants>
+	</FieldVariants>
 
 	{#if priority.allIssues()?.length}
 		<div class="message error">

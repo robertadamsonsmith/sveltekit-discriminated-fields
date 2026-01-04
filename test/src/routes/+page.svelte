@@ -9,5 +9,5 @@
 	<li><a href="/selector-radio-form">Selector prop with radios</a> (non-sibling radio layout)</li>
 	<li><a href="/nested-form">Nested form</a> (discriminated union inside object)</li>
 	<li><a href="/nested-union-form">Nested union</a> (discriminated union inside discriminated union)</li>
-	<li><a href="/programmatic-form">Programmatic form</a> (using discriminatedFields for set/narrowing)</li>
+	<li><a href="/programmatic-form">Programmatic form</a> (using discriminated for set/narrowing)</li>
 </ul>

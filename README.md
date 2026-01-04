@@ -4,8 +4,8 @@ Type-safe discriminated union support for SvelteKit remote function form fields.
 
 This library provides two complementary tools for working with discriminated unions in SvelteKit forms:
 
-- **`discriminatedFields()`** - A wrapper function that enables proper TypeScript type narrowing on form field objects
-- **`UnionVariants`** - A component that renders variant-specific form sections with CSS-only visibility, supporting progressive enhancement (works without JavaScript)
+- **`discriminated()`** - A wrapper function that enables proper TypeScript type narrowing on form field objects
+- **`FieldVariants`** - A component that renders variant-specific form sections with CSS-only visibility, supporting progressive enhancement (works without JavaScript)
 
 The implementation prioritises:
 
@@ -22,9 +22,9 @@ This library exposes existing SvelteKit form behaviour with improved typing for 
 npm install sveltekit-discriminated-fields
 ```
 
-## UnionVariants Component
+## FieldVariants Component
 
-The `UnionVariants` component provides declarative variant rendering with **full progressive enhancement support**. It uses CSS-only visibility toggling via `:has()` selectors, so forms work identically with or without JavaScript enabled.
+The `FieldVariants` component provides declarative variant rendering with **full progressive enhancement support**. It uses CSS-only visibility toggling via `form:has()` selectors, so forms work identically with or without JavaScript enabled.
 
 Given a SvelteKit remote function using Zod (this library also works with [Valibot](./test/src/routes/valibot-form) or other validation libraries):
 
@@ -48,12 +48,12 @@ export const shapeForm = form(shapeSchema, async (data) => {
 });
 ```
 
-Use `UnionVariants` to render variant-specific fields:
+Use `FieldVariants` to render variant-specific fields:
 
 ```svelte
 <script lang="ts">
   import { shapeForm } from './data.remote';
-  import { UnionVariants } from 'sveltekit-discriminated-fields';
+  import { FieldVariants } from 'sveltekit-discriminated-fields';
 </script>
 
 <form {...shapeForm}>
@@ -64,45 +64,58 @@ Use `UnionVariants` to render variant-specific fields:
     <option value="point">Point</option>
   </select>
 
-  <UnionVariants fields={shapeForm.fields} key="kind">
-    {#snippet fallback()}
-      <p>Please select a shape type above.</p>
+  <FieldVariants fields={shapeForm.fields} key="kind">
+    {#snippet fallback(props)}
+      <p {...props}>Please select a shape type above.</p>
     {/snippet}
 
-    {#snippet circle(s)}
-      <input {...s.radius.as('number')} placeholder="Radius" />
+    {#snippet circle(v)}
+      <label {...v}>
+        Radius: <input {...v.fields.radius.as('number')} />
+      </label>
     {/snippet}
 
-    {#snippet rectangle(s)}
-      <input {...s.width.as('number')} placeholder="Width" />
-      <input {...s.height.as('number')} placeholder="Height" />
+    {#snippet rectangle(v)}
+      <div {...v}>
+        <input {...v.fields.width.as('number')} placeholder="Width" />
+        <input {...v.fields.height.as('number')} placeholder="Height" />
+      </div>
     {/snippet}
 
-    {#snippet point(_s)}
-      <p>Point has no additional fields.</p>
+    {#snippet point(v)}
+      <p {...v}>Point has no additional fields.</p>
     {/snippet}
-  </UnionVariants>
+  </FieldVariants>
 
   <button type="submit">Submit</button>
 </form>
 ```
 
-The optional `fallback` snippet is displayed when no variant is currently selected (i.e., when the discriminator field is empty).
+### Snippet Parameters
 
-Each snippet receives correctly narrowed fields for that variant - TypeScript knows `s.radius` exists in the `circle` snippet but not in `rectangle`. Only valid discriminator values are accepted.
+Each variant snippet receives a single argument that mirrors how forms work in SvelteKit:
 
-Snippets only receive fields **specific to that variant**. Fields common to all variants (same name and type) should be rendered outside `UnionVariants` to prevent accidental duplicate inputs. Fields shared by some but not all variants, or with differing types across variants, produce compile-time errors.
+- **Spread for CSS targeting**: `{...v}` - Adds the `data-fv` attribute for CSS visibility
+- **Access fields**: `v.fields.radius` - Provides the variant-specific form fields
+
+This pattern is consistent with how you use forms: `<form {...form}>` + `form.fields.x`.
+
+### Snippets and Fields
+
+Each snippet receives correctly narrowed fields for that variant - TypeScript knows `v.fields.radius` exists in the `circle` snippet but not in `rectangle`. Only valid discriminator values are accepted.
+
+Snippets only receive fields **specific to that variant**. Fields common to all variants (same name and type) should be rendered outside `FieldVariants` to prevent accidental duplicate inputs. Fields shared by some but not all variants, or with differing types across variants, produce compile-time errors.
 
 ### Radio Buttons
 
-For radio button discriminators, you must use the `discriminatedFields()` wrapper. The raw SvelteKit field object's `.as("radio", value)` method doesn't work with discriminated unions (causes a static error). The wrapped version is type-safe - only valid discriminator values are accepted:
+For radio button discriminators, you must use the `discriminated()` wrapper. The raw SvelteKit field object's `.as("radio", value)` method doesn't work with discriminated unions (causes a static error). The wrapped version is type-safe - only valid discriminator values are accepted:
 
 ```svelte
 <script lang="ts">
   import { shapeForm } from './data.remote';
-  import { discriminatedFields, UnionVariants } from 'sveltekit-discriminated-fields';
+  import { discriminated, FieldVariants } from 'sveltekit-discriminated-fields';
 
-  const shape = $derived(discriminatedFields('kind', shapeForm.fields));
+  const shape = $derived(discriminated('kind', shapeForm.fields));
 </script>
 
 <form {...shapeForm}>
@@ -112,31 +125,62 @@ For radio button discriminators, you must use the `discriminatedFields()` wrappe
     <label><input {...shape.kind.as("radio", "point")} /> Point</label>
   </fieldset>
 
-  <UnionVariants fields={shape} key="kind">
-    <!-- snippets work the same way -->
-  </UnionVariants>
+  <FieldVariants fields={shape} key="kind">
+    {#snippet fallback(props)}
+      <p {...props}>Select a shape type</p>
+    {/snippet}
+
+    {#snippet circle(v)}
+      <label {...v}>
+        Radius: <input {...v.fields.radius.as('number')} />
+      </label>
+    {/snippet}
+
+    <!-- other snippets -->
+  </FieldVariants>
 </form>
 ```
 
 See the [radio-form example](./test/src/routes/radio-form) for a complete working example.
 
-### Non-Sibling Layouts with `selector`
+### Select Options
 
-By default, `UnionVariants` expects the discriminator input (select or radios) to be a sibling element. For complex layouts where this isn't possible, use the `selector` prop:
+For select elements, you can use `.as("option", value)` for type-safe option values. This is optional - you can still use `value="..."` directly if you prefer:
 
 ```svelte
-<div class="header">
-  <select {...shape.kind.as('select')} id="shape-select">
-    <!-- options -->
-  </select>
-</div>
+<select {...shape.kind.as("select")}>
+  <!-- Type-safe: typos caught at compile time -->
+  <option {...shape.kind.as("option")}>Select a shape...</option>
+  <option {...shape.kind.as("option", "circle")}>Circle</option>
+  <option {...shape.kind.as("option", "rectangle")}>Rectangle</option>
 
-<div class="body">
-  <!-- Not a sibling of the select! -->
-  <UnionVariants fields={shape} key="kind" selector="#shape-select">
-    <!-- snippets -->
-  </UnionVariants>
-</div>
+  <!-- Also works: standard HTML (no type checking) -->
+  <option value="point">Point</option>
+</select>
+```
+
+- `as("option")` returns `{ value: "" }` for the placeholder option
+- `as("option", "circle")` returns `{ value: "circle" }` with type checking
+
+### CSS-Based Visibility
+
+`FieldVariants` uses `form:has()` CSS selectors to show/hide variant sections based on the selected discriminator value. This works automatically for any layout - the discriminator input and variant sections can be anywhere within the same `<form>`.
+
+```svelte
+<form {...shapeForm}>
+  <div class="header">
+    <select {...shapeForm.fields.kind.as('select')}>
+      <!-- options -->
+    </select>
+  </div>
+
+  <div class="body">
+    <!-- Works regardless of DOM structure -->
+    <FieldVariants fields={shapeForm.fields} key="kind">
+      <!-- snippets -->
+    </FieldVariants>
+  </div>
+</form>
 ```
 
 See the [selector-form example](./test/src/routes/selector-form) for select elements or [selector-radio-form example](./test/src/routes/selector-radio-form) for radio buttons.
@@ -156,50 +200,92 @@ const orderSchema = z.object({
 ```
 
 ```svelte
-<UnionVariants fields={orderForm.fields.shipping} key="method">
-  <!-- snippets for pickup and delivery -->
-</UnionVariants>
+<script lang="ts">
+  import { discriminated, FieldVariants } from 'sveltekit-discriminated-fields';
+
+  const shipping = $derived(discriminated('method', orderForm.fields.shipping));
+</script>
+
+<FieldVariants fields={shipping} key="method">
+  {#snippet pickup(v)}
+    <input {...v} {...v.fields.store.as('text')} />
+  {/snippet}
+
+  {#snippet delivery(v)}
+    <input {...v} {...v.fields.address.as('text')} />
+  {/snippet}
+</FieldVariants>
 ```
 
 You can also have multiple discriminated unions in the same form, or even a discriminated union nested within another discriminated union. See the [nested-form example](./test/src/routes/nested-form) for nested unions within objects, or [nested-union-form example](./test/src/routes/nested-union-form) for a union inside a union.
 
 ### Partial Variants
 
-By default, `UnionVariants` requires a snippet for every variant - a compile error appears if one is missing, helping you avoid omissions. When you intentionally want to handle only some variants, use `partial={true}`:
+By default, `FieldVariants` requires a snippet for every variant - a compile error appears if one is missing, helping you avoid omissions. When you intentionally want to handle only some variants, use `partial={true}`:
 
 ```svelte
-<UnionVariants fields={shape} key="kind" partial={true}>
-  {#snippet circle(s)}
-    <input {...s.radius.as('number')} />
+<FieldVariants fields={shape} key="kind" partial={true}>
+  {#snippet circle(v)}
+    <input {...v} {...v.fields.radius.as('number')} />
   {/snippet}
 
-  {#snippet rectangle(s)}
-    <input {...s.width.as('number')} />
+  {#snippet rectangle(v)}
+    <input {...v} {...v.fields.width.as('number')} />
   {/snippet}
 
-  <!-- point snippet omitted - fallback shown when point selected -->
-</UnionVariants>
+  <!-- point snippet omitted - nothing shown when point selected -->
+</FieldVariants>
 ```
 
-## discriminatedFields Function
+### Progressive Enhancement
+
+`FieldVariants` provides true progressive enhancement:
+
+1. **Before JavaScript loads**: All variant snippets are rendered, CSS handles visibility
+2. **After JavaScript hydrates**: Switches to conditional rendering, enabling Svelte transitions
+
+This means forms work without JavaScript, but once JS loads, you get full Svelte features:
+
+```svelte
+<FieldVariants fields={shape} key="kind">
+  {#snippet circle(v)}
+    <!-- Svelte transitions work after hydration -->
+    <div {...v} transition:slide>
+      <input {...v.fields.radius.as('number')} />
+    </div>
+  {/snippet}
+</FieldVariants>
+```
+
+### Disabling CSS
+
+If you want to handle visibility yourself, disable CSS generation:
+
+```svelte
+<FieldVariants fields={shape} key="kind" css={false}>
+  <!-- snippets -->
+</FieldVariants>
+```
+
+## discriminated Function
 
 When using SvelteKit's remote function `form()` with discriminated union schemas, the generated `fields` object is a union of field objects. TypeScript only allows access to properties that exist on ALL variants - meaning variant-specific fields are inaccessible, and `.as("radio", value)` doesn't work.
 
-The `discriminatedFields()` function wraps your form fields to:
+The `discriminated()` function wraps your form fields to:
 
 1. Make all variant fields accessible
 2. Add a `${key}Value` property that enables TypeScript narrowing
 3. Provide a type-safe `set()` method for programmatic updates
 4. Fix `.as("radio", value)` to accept only valid discriminator values
 
-The following example demonstrates conditionally rendering variant-specific fields with type-safe narrowing, without using `UnionVariants`. This approach requires JavaScript (unlike `UnionVariants` which works without JS):
+The following example demonstrates conditionally rendering variant-specific fields with type-safe narrowing, without using `FieldVariants`. This approach requires JavaScript (unlike `FieldVariants` which works without JS):
 
 ```svelte
 <script lang="ts">
   import { shapeForm } from './data.remote';
-  import { discriminatedFields } from 'sveltekit-discriminated-fields';
+  import { discriminated } from 'sveltekit-discriminated-fields';
 
-  const shape = $derived(discriminatedFields('kind', shapeForm.fields));
+  const shape = $derived(discriminated('kind', shapeForm.fields));
 </script>
 
 <!-- Use kindValue (not kind.value()) for type narrowing -->
@@ -215,25 +301,25 @@ See the [programmatic-form example](./test/src/routes/programmatic-form) for usa
 
 ## API
 
-### `UnionVariants`
+### `FieldVariants`
 
 A component for rendering variant-specific form sections with CSS-only visibility.
 
 **Props:**
 
-| Prop       | Type                  | Description                                                 |
-| ---------- | --------------------- | ----------------------------------------------------------- |
-| `fields`   | `DiscriminatedFields` | The wrapped form fields from `discriminatedFields()`        |
-| `key`      | `string`              | The discriminator key (must match a field in the schema)    |
-| `selector` | `string` (optional)   | CSS selector for the discriminator input when not a sibling |
-| `partial`  | `boolean` (optional)  | Allow missing snippets for some variants                    |
+| Prop      | Type                  | Description                                               |
+| --------- | --------------------- | --------------------------------------------------------- |
+| `fields`  | `DiscriminatedFields` | Form fields (raw or wrapped with `discriminated()`)       |
+| `key`     | `string`              | The discriminator key (must match a field in the schema)  |
+| `partial` | `boolean` (optional)  | Allow missing snippets for some variants (default: false) |
+| `css`     | `boolean` (optional)  | Enable CSS visibility generation (default: true)          |
 
 **Snippets:**
 
-- `fallback` - Rendered when no variant is selected
-- `{variantName}(fields)` - One snippet per variant, receives narrowed fields
+- `fallback(props)` - Rendered when no variant is selected. Spread `props` onto your element.
+- `{variantName}(v)` - One snippet per variant. Spread `v` onto your container, access fields via `v.fields`.
 
-### `discriminatedFields(key, fields)`
+### `discriminated(key, fields)`
 
 Wraps discriminated union form fields for type-safe narrowing.
 
@@ -247,16 +333,38 @@ Wraps discriminated union form fields for type-safe narrowing.
 - All original fields passed through unchanged
 - `${key}Value` - The current discriminator value (for narrowing)
 - `set(data)` - Type-safe setter that infers variant from discriminator
+- `allIssues()` - All validation issues for the discriminated fields
 
 ### `DiscriminatedData<T>`
 
 Type helper that extracts the underlying data type from wrapped fields:
 
 ```typescript
-const payment = discriminatedFields("type", form.fields);
+const payment = discriminated("type", form.fields);
 type Payment = DiscriminatedData<typeof payment>;
 // { type: 'card'; cardNumber: string; cvv: string } | { type: 'bank'; ... }
 ```
+
+### `VariantSnippetArg<T>`
+
+Type for the argument passed to variant snippets:
+
+```typescript
+// v can be spread onto elements and has a .fields property
+type VariantSnippetArg<T> = VariantProps & { readonly fields: T };
+```
+
+## Migration from v0.1
+
+If upgrading from v0.1:
+
+1. Rename `UnionVariants` to `FieldVariants`
+2. Rename `discriminatedFields()` to `discriminated()`
+3. Remove the `selector` prop (no longer needed - `form:has()` handles all layouts)
+4. Update snippet signatures:
+   - Old: `{#snippet circle(fields)} <input {...fields.radius.as('number')} />`
+   - New: `{#snippet circle(v)} <div {...v}><input {...v.fields.radius.as('number')} /></div>`
+5. Add `props` parameter to fallback and spread it: `{#snippet fallback(props)} <p {...props}>...</p>`
 
 ## License
 

@@ -16,13 +16,18 @@ type DiscriminatorValues<K extends string, D> = D extends Record<K, infer V> ? E
 
 type RadioProps = RemoteFormField<string> extends { as(type: 'radio', value: string): infer R } ? R : never;
 
+// Option props - simple value attribute for select options
+type OptionProps = { value: string };
+
 // =============================================================================
-// Discriminator field - .as("radio") only accepts valid values
+// Discriminator field - .as("radio") and .as("option") only accept valid values
 // =============================================================================
 
-// Discriminator field with variant-specific value() but union-accepting .as("radio")
+// Discriminator field with variant-specific value() but union-accepting .as("radio") and .as("option")
 type VariantDiscriminatorField<V extends string, AllV extends string> = Omit<RemoteFormField<V>, 'as'> & {
 	as(type: 'radio', value: AllV): RadioProps;
+	as(type: 'option'): OptionProps;
+	as(type: 'option', value: AllV): OptionProps;
 	as(type: Exclude<RemoteFormFieldType<V>, 'radio'>, ...args: unknown[]): ReturnType<RemoteFormField<V>['as']>;
 };
 
@@ -81,33 +86,57 @@ type DiscriminatedFields<K extends string, D, AllV extends string = Discriminato
 // =============================================================================
 
 /**
- * Wraps discriminated union form fields for type-safe access.
+ * Marks discriminated union form fields for type-safe narrowing.
  * - All original fields pass through unchanged (type, issues, allIssues, etc.)
  * - `set` is overridden with type-safe version
  * - `${key}Value` is added for discriminator value (e.g., `reward.typeValue`)
  * - Discriminator field `.as("radio", value)` is type-safe (only valid values allowed)
+ * - Discriminator field `.as("option", value?)` is type-safe for select options
  *
  * @example
  * ```svelte
  * <script>
- *   const priority = $derived(discriminatedFields("level", priorityForm.fields));
+ *   const priority = $derived(discriminated("level", priorityForm.fields));
  * </script>
  *
  * <input {...priority.level.as("radio", "high")} /> <!-- type-safe: only valid values allowed -->
+ *
+ * <select {...priority.level.as("select")}>
+ *   <option {...priority.level.as("option")}>Select...</option>
+ *   <option {...priority.level.as("option", "high")}>High</option>
+ * </select>
  * ```
  *
  * @param key - Discriminator key (e.g. 'type')
  * @param fields - Form fields from a discriminated union schema
- * @returns Passthrough object with type-safe set(), ${key}Value, and .as("radio", value)
+ * @returns Passthrough object with type-safe set(), ${key}Value, .as("radio", value), and .as("option", value?)
  */
-export function discriminatedFields<
+export function discriminated<
 	K extends string,
 	T extends { set: (v: never) => unknown } & Record<K, { value(): unknown; as(type: 'radio', value: string): object }>
 >(key: K, fields: T): DiscriminatedFields<K, DiscriminatedData<T>> {
+	// Wrap the discriminator field to intercept as("option", value?) calls
+	const wrapDiscriminatorField = (field: T[K]) => {
+		return new Proxy(field, {
+			get(fieldTarget, fieldProp) {
+				if (fieldProp === 'as') {
+					return (type: string, value?: string) => {
+						if (type === 'option') {
+							return { value: value ?? '' };
+						}
+						return fieldTarget.as(type as 'radio', value as string);
+					};
+				}
+				return Reflect.get(fieldTarget, fieldProp);
+			}
+		});
+	};
+
 	const proxy = new Proxy(fields, {
 		get(target, prop) {
 			if (prop === `${key}Value`) return target[key].value();
 			if (prop === 'set') return (data: Parameters<T['set']>[0]) => target.set(data);
+			if (prop === key) return wrapDiscriminatorField(target[key]);
 			return Reflect.get(target, prop);
 		},
 		has(target, prop) {

@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { contactForm } from "./data.remote";
-	import { UnionVariants } from "sveltekit-discriminated-fields";
+	import { FieldVariants } from "sveltekit-discriminated-fields";
+	import { slide } from "svelte/transition";
 </script>
 
-<h1>Selector Prop Test</h1>
-<p>This page tests the <code>selector</code> prop with a non-sibling layout.</p>
+<h1>Non-Sibling Layout Test</h1>
+<p>This page tests FieldVariants with a non-sibling DOM layout (no selector needed with form:has).</p>
+<p><strong>Progressive Enhancement Demo:</strong> With JS enabled, variant sections slide in/out. Without JS, CSS handles visibility.</p>
 
 <!-- The form has a nested structure where discriminator and variants are NOT siblings -->
 <form {...contactForm} id="contact-form">
@@ -24,33 +26,32 @@
 	</div>
 
 	<div class="form-body">
-		<!-- Variants are in a completely different branch of the DOM -->
+		<!-- Variants are in a completely different branch of the DOM - form:has() handles this -->
 		<div class="fields-container">
-			<UnionVariants
+			<FieldVariants
 				fields={contactForm.fields}
 				key="method"
-				selector="#method-select"
 			>
-				{#snippet fallback()}
-					<p data-testid="fallback">Please select a contact method above.</p>
+				{#snippet fallback(props)}
+					<p {...props} data-testid="fallback" transition:slide>Please select a contact method above.</p>
 				{/snippet}
-				{#snippet email(fields)}
-					<div data-testid="email-fields">
+				{#snippet email(v)}
+					<div {...v} data-testid="email-fields" transition:slide>
 						<label>
 							Email Address:
-							<input {...fields.emailAddress.as("email")} data-testid="email-input" />
+							<input {...v.fields.emailAddress.as("email")} data-testid="email-input" />
 						</label>
 					</div>
 				{/snippet}
-				{#snippet phone(fields)}
-					<div data-testid="phone-fields">
+				{#snippet phone(v)}
+					<div {...v} data-testid="phone-fields" transition:slide>
 						<label>
 							Phone Number:
-							<input {...fields.phoneNumber.as("tel")} data-testid="phone-input" />
+							<input {...v.fields.phoneNumber.as("tel")} data-testid="phone-input" />
 						</label>
 					</div>
 				{/snippet}
-			</UnionVariants>
+			</FieldVariants>
 		</div>
 	</div>
 

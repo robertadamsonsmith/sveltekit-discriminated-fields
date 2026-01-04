@@ -5,42 +5,48 @@ import { test, expect } from "@playwright/test";
 // =============================================================================
 
 test.describe("Zod discriminated union form", () => {
+	// Use field names to identify variant visibility - each variant has unique fields
+	const circle = () => 'input[name="n:radius"]';
+	const rectangle = () => 'input[name="n:width"]';
+	const point = () => 'input[name="n:x"]';
+	const fallback = () => 'p:has-text("Please select a shape type above")';
+
 	test.beforeEach(async ({ page }) => {
 		await page.goto("/zod-form");
 	});
 
 	test("shows fallback when no shape selected", async ({ page }) => {
-		await expect(page.locator('[data-union-kind="fallback"]')).toBeVisible();
-		await expect(page.locator('[data-union-kind="circle"]')).toBeHidden();
-		await expect(page.locator('[data-union-kind="rectangle"]')).toBeHidden();
-		await expect(page.locator('[data-union-kind="point"]')).toBeHidden();
+		await expect(page.locator(fallback())).toBeVisible();
+		await expect(page.locator(circle())).toBeHidden();
+		await expect(page.locator(rectangle())).toBeHidden();
+		await expect(page.locator(point())).toBeHidden();
 	});
 
 	test("shows circle fields when circle selected", async ({ page }) => {
 		await page.selectOption('select[name="kind"]', "circle");
 
-		await expect(page.locator('[data-union-kind="fallback"]')).toBeHidden();
-		await expect(page.locator('[data-union-kind="circle"]')).toBeVisible();
-		await expect(page.locator('[data-union-kind="rectangle"]')).toBeHidden();
-		await expect(page.locator('[data-union-kind="point"]')).toBeHidden();
+		await expect(page.locator(fallback())).toBeHidden();
+		await expect(page.locator(circle())).toBeVisible();
+		await expect(page.locator(rectangle())).toBeHidden();
+		await expect(page.locator(point())).toBeHidden();
 	});
 
 	test("shows rectangle fields when rectangle selected", async ({ page }) => {
 		await page.selectOption('select[name="kind"]', "rectangle");
 
-		await expect(page.locator('[data-union-kind="fallback"]')).toBeHidden();
-		await expect(page.locator('[data-union-kind="circle"]')).toBeHidden();
-		await expect(page.locator('[data-union-kind="rectangle"]')).toBeVisible();
-		await expect(page.locator('[data-union-kind="point"]')).toBeHidden();
+		await expect(page.locator(fallback())).toBeHidden();
+		await expect(page.locator(circle())).toBeHidden();
+		await expect(page.locator(rectangle())).toBeVisible();
+		await expect(page.locator(point())).toBeHidden();
 	});
 
 	test("shows point fields when point selected", async ({ page }) => {
 		await page.selectOption('select[name="kind"]', "point");
 
-		await expect(page.locator('[data-union-kind="fallback"]')).toBeHidden();
-		await expect(page.locator('[data-union-kind="circle"]')).toBeHidden();
-		await expect(page.locator('[data-union-kind="rectangle"]')).toBeHidden();
-		await expect(page.locator('[data-union-kind="point"]')).toBeVisible();
+		await expect(page.locator(fallback())).toBeHidden();
+		await expect(page.locator(circle())).toBeHidden();
+		await expect(page.locator(rectangle())).toBeHidden();
+		await expect(page.locator(point())).toBeVisible();
 	});
 
 	test("submits circle form successfully", async ({ page }) => {
@@ -72,17 +78,17 @@ test.describe("Zod discriminated union form", () => {
 	test("switches between variants correctly", async ({ page }) => {
 		// Start with circle
 		await page.selectOption('select[name="kind"]', "circle");
-		await expect(page.locator('[data-union-kind="circle"]')).toBeVisible();
+		await expect(page.locator(circle())).toBeVisible();
 
 		// Switch to rectangle
 		await page.selectOption('select[name="kind"]', "rectangle");
-		await expect(page.locator('[data-union-kind="circle"]')).toBeHidden();
-		await expect(page.locator('[data-union-kind="rectangle"]')).toBeVisible();
+		await expect(page.locator(circle())).toBeHidden();
+		await expect(page.locator(rectangle())).toBeVisible();
 
 		// Switch to point
 		await page.selectOption('select[name="kind"]', "point");
-		await expect(page.locator('[data-union-kind="rectangle"]')).toBeHidden();
-		await expect(page.locator('[data-union-kind="point"]')).toBeVisible();
+		await expect(page.locator(rectangle())).toBeHidden();
+		await expect(page.locator(point())).toBeVisible();
 	});
 });
 
@@ -91,42 +97,48 @@ test.describe("Zod discriminated union form", () => {
 // =============================================================================
 
 test.describe("Valibot discriminated union form", () => {
+	// Use field names to identify variant visibility
+	const card = () => 'input[name="cardNumber"]';
+	const bank = () => 'input[name="accountNumber"]';
+	const cash = () => 'p:has-text("No additional information needed for cash")';
+	const fallback = () => 'p:has-text("Please select a payment method above")';
+
 	test.beforeEach(async ({ page }) => {
 		await page.goto("/valibot-form");
 	});
 
 	test("shows fallback when no payment method selected", async ({ page }) => {
-		await expect(page.locator('[data-union-method="fallback"]')).toBeVisible();
-		await expect(page.locator('[data-union-method="card"]')).toBeHidden();
-		await expect(page.locator('[data-union-method="bank"]')).toBeHidden();
-		await expect(page.locator('[data-union-method="cash"]')).toBeHidden();
+		await expect(page.locator(fallback())).toBeVisible();
+		await expect(page.locator(card())).toBeHidden();
+		await expect(page.locator(bank())).toBeHidden();
+		await expect(page.locator(cash())).toBeHidden();
 	});
 
 	test("shows card fields when card selected", async ({ page }) => {
 		await page.selectOption('select[name="method"]', "card");
 
-		await expect(page.locator('[data-union-method="fallback"]')).toBeHidden();
-		await expect(page.locator('[data-union-method="card"]')).toBeVisible();
-		await expect(page.locator('[data-union-method="bank"]')).toBeHidden();
-		await expect(page.locator('[data-union-method="cash"]')).toBeHidden();
+		await expect(page.locator(fallback())).toBeHidden();
+		await expect(page.locator(card())).toBeVisible();
+		await expect(page.locator(bank())).toBeHidden();
+		await expect(page.locator(cash())).toBeHidden();
 	});
 
 	test("shows bank fields when bank selected", async ({ page }) => {
 		await page.selectOption('select[name="method"]', "bank");
 
-		await expect(page.locator('[data-union-method="fallback"]')).toBeHidden();
-		await expect(page.locator('[data-union-method="card"]')).toBeHidden();
-		await expect(page.locator('[data-union-method="bank"]')).toBeVisible();
-		await expect(page.locator('[data-union-method="cash"]')).toBeHidden();
+		await expect(page.locator(fallback())).toBeHidden();
+		await expect(page.locator(card())).toBeHidden();
+		await expect(page.locator(bank())).toBeVisible();
+		await expect(page.locator(cash())).toBeHidden();
 	});
 
 	test("shows cash fields when cash selected", async ({ page }) => {
 		await page.selectOption('select[name="method"]', "cash");
 
-		await expect(page.locator('[data-union-method="fallback"]')).toBeHidden();
-		await expect(page.locator('[data-union-method="card"]')).toBeHidden();
-		await expect(page.locator('[data-union-method="bank"]')).toBeHidden();
-		await expect(page.locator('[data-union-method="cash"]')).toBeVisible();
+		await expect(page.locator(fallback())).toBeHidden();
+		await expect(page.locator(card())).toBeHidden();
+		await expect(page.locator(bank())).toBeHidden();
+		await expect(page.locator(cash())).toBeVisible();
 	});
 
 	test("submits card form successfully", async ({ page }) => {
@@ -160,58 +172,64 @@ test.describe("Valibot discriminated union form", () => {
 // =============================================================================
 
 test.describe("Radio button form", () => {
+	// Use field names to identify variant visibility
+	const high = () => 'input[name="deadline"]';
+	const medium = () => 'input[name="notes"]';
+	const low = () => 'p:has-text("No additional information needed for low priority")';
+	const fallback = () => 'p:has-text("Please select a priority level above")';
+
 	test.beforeEach(async ({ page }) => {
 		await page.goto("/radio-form");
 	});
 
 	test("shows fallback when no radio selected", async ({ page }) => {
-		await expect(page.locator('[data-union-level="fallback"]')).toBeVisible();
-		await expect(page.locator('[data-union-level="high"]')).toBeHidden();
-		await expect(page.locator('[data-union-level="medium"]')).toBeHidden();
-		await expect(page.locator('[data-union-level="low"]')).toBeHidden();
+		await expect(page.locator(fallback())).toBeVisible();
+		await expect(page.locator(high())).toBeHidden();
+		await expect(page.locator(medium())).toBeHidden();
+		await expect(page.locator(low())).toBeHidden();
 	});
 
 	test("shows high fields when high radio selected", async ({ page }) => {
 		await page.click('input[name="level"][value="high"]');
 
-		await expect(page.locator('[data-union-level="fallback"]')).toBeHidden();
-		await expect(page.locator('[data-union-level="high"]')).toBeVisible();
-		await expect(page.locator('[data-union-level="medium"]')).toBeHidden();
-		await expect(page.locator('[data-union-level="low"]')).toBeHidden();
+		await expect(page.locator(fallback())).toBeHidden();
+		await expect(page.locator(high())).toBeVisible();
+		await expect(page.locator(medium())).toBeHidden();
+		await expect(page.locator(low())).toBeHidden();
 	});
 
 	test("shows medium fields when medium radio selected", async ({ page }) => {
 		await page.click('input[name="level"][value="medium"]');
 
-		await expect(page.locator('[data-union-level="fallback"]')).toBeHidden();
-		await expect(page.locator('[data-union-level="high"]')).toBeHidden();
-		await expect(page.locator('[data-union-level="medium"]')).toBeVisible();
-		await expect(page.locator('[data-union-level="low"]')).toBeHidden();
+		await expect(page.locator(fallback())).toBeHidden();
+		await expect(page.locator(high())).toBeHidden();
+		await expect(page.locator(medium())).toBeVisible();
+		await expect(page.locator(low())).toBeHidden();
 	});
 
 	test("shows low fields when low radio selected", async ({ page }) => {
 		await page.click('input[name="level"][value="low"]');
 
-		await expect(page.locator('[data-union-level="fallback"]')).toBeHidden();
-		await expect(page.locator('[data-union-level="high"]')).toBeHidden();
-		await expect(page.locator('[data-union-level="medium"]')).toBeHidden();
-		await expect(page.locator('[data-union-level="low"]')).toBeVisible();
+		await expect(page.locator(fallback())).toBeHidden();
+		await expect(page.locator(high())).toBeHidden();
+		await expect(page.locator(medium())).toBeHidden();
+		await expect(page.locator(low())).toBeVisible();
 	});
 
 	test("switches between variants on radio click", async ({ page }) => {
 		// Start with high
 		await page.click('input[name="level"][value="high"]');
-		await expect(page.locator('[data-union-level="high"]')).toBeVisible();
+		await expect(page.locator(high())).toBeVisible();
 
 		// Switch to medium
 		await page.click('input[name="level"][value="medium"]');
-		await expect(page.locator('[data-union-level="high"]')).toBeHidden();
-		await expect(page.locator('[data-union-level="medium"]')).toBeVisible();
+		await expect(page.locator(high())).toBeHidden();
+		await expect(page.locator(medium())).toBeVisible();
 
 		// Switch to low
 		await page.click('input[name="level"][value="low"]');
-		await expect(page.locator('[data-union-level="medium"]')).toBeHidden();
-		await expect(page.locator('[data-union-level="low"]')).toBeVisible();
+		await expect(page.locator(medium())).toBeHidden();
+		await expect(page.locator(low())).toBeVisible();
 	});
 
 	test("submits high priority form successfully", async ({ page }) => {
@@ -248,14 +266,30 @@ test.describe("Radio button form", () => {
 test.describe("Progressive enhancement (no JavaScript)", () => {
 	test.use({ javaScriptEnabled: false });
 
+	// Selectors for zod-form
+	const zodCircle = () => 'input[name="n:radius"]';
+	const zodRectangle = () => 'input[name="n:width"]';
+	const zodPoint = () => 'input[name="n:x"]';
+	const zodFallback = () => 'p:has-text("Please select a shape type above")';
+
+	// Selectors for radio-form
+	const radioHigh = () => 'input[name="deadline"]';
+	const radioMedium = () => 'input[name="notes"]';
+	const radioLow = () => 'p:has-text("No additional information needed for low priority")';
+	const radioFallback = () => 'p:has-text("Please select a priority level above")';
+
+	// Selectors for valibot-form
+	const valibotFallback = () => 'p:has-text("Please select a payment method above")';
+	const valibotCash = () => 'p:has-text("No additional information needed for cash")';
+
 	// Select element tests
 	test("select: fallback visible when nothing selected", async ({ page }) => {
 		await page.goto("/zod-form");
 
-		await expect(page.locator('[data-union-kind="fallback"]')).toBeVisible();
-		await expect(page.locator('[data-union-kind="circle"]')).toBeHidden();
-		await expect(page.locator('[data-union-kind="rectangle"]')).toBeHidden();
-		await expect(page.locator('[data-union-kind="point"]')).toBeHidden();
+		await expect(page.locator(zodFallback())).toBeVisible();
+		await expect(page.locator(zodCircle())).toBeHidden();
+		await expect(page.locator(zodRectangle())).toBeHidden();
+		await expect(page.locator(zodPoint())).toBeHidden();
 	});
 
 	test("select: shows correct variant when option selected", async ({ page }) => {
@@ -263,9 +297,9 @@ test.describe("Progressive enhancement (no JavaScript)", () => {
 
 		await page.selectOption('select[name="kind"]', "circle");
 
-		await expect(page.locator('[data-union-kind="fallback"]')).toBeHidden();
-		await expect(page.locator('[data-union-kind="circle"]')).toBeVisible();
-		await expect(page.locator('[data-union-kind="rectangle"]')).toBeHidden();
+		await expect(page.locator(zodFallback())).toBeHidden();
+		await expect(page.locator(zodCircle())).toBeVisible();
+		await expect(page.locator(zodRectangle())).toBeHidden();
 	});
 
 	test("select: switches variants without JS", async ({ page }) => {
@@ -273,12 +307,12 @@ test.describe("Progressive enhancement (no JavaScript)", () => {
 
 		// Select circle
 		await page.selectOption('select[name="kind"]', "circle");
-		await expect(page.locator('[data-union-kind="circle"]')).toBeVisible();
+		await expect(page.locator(zodCircle())).toBeVisible();
 
 		// Switch to rectangle
 		await page.selectOption('select[name="kind"]', "rectangle");
-		await expect(page.locator('[data-union-kind="circle"]')).toBeHidden();
-		await expect(page.locator('[data-union-kind="rectangle"]')).toBeVisible();
+		await expect(page.locator(zodCircle())).toBeHidden();
+		await expect(page.locator(zodRectangle())).toBeVisible();
 	});
 
 	test("select: form submission works without JS", async ({ page }) => {
@@ -295,10 +329,10 @@ test.describe("Progressive enhancement (no JavaScript)", () => {
 	test("radio: fallback visible when nothing checked", async ({ page }) => {
 		await page.goto("/radio-form");
 
-		await expect(page.locator('[data-union-level="fallback"]')).toBeVisible();
-		await expect(page.locator('[data-union-level="high"]')).toBeHidden();
-		await expect(page.locator('[data-union-level="medium"]')).toBeHidden();
-		await expect(page.locator('[data-union-level="low"]')).toBeHidden();
+		await expect(page.locator(radioFallback())).toBeVisible();
+		await expect(page.locator(radioHigh())).toBeHidden();
+		await expect(page.locator(radioMedium())).toBeHidden();
+		await expect(page.locator(radioLow())).toBeHidden();
 	});
 
 	test("radio: shows correct variant when radio checked", async ({ page }) => {
@@ -306,9 +340,9 @@ test.describe("Progressive enhancement (no JavaScript)", () => {
 
 		await page.click('input[name="level"][value="high"]');
 
-		await expect(page.locator('[data-union-level="fallback"]')).toBeHidden();
-		await expect(page.locator('[data-union-level="high"]')).toBeVisible();
-		await expect(page.locator('[data-union-level="medium"]')).toBeHidden();
+		await expect(page.locator(radioFallback())).toBeHidden();
+		await expect(page.locator(radioHigh())).toBeVisible();
+		await expect(page.locator(radioMedium())).toBeHidden();
 	});
 
 	test("radio: switches variants without JS", async ({ page }) => {
@@ -316,12 +350,12 @@ test.describe("Progressive enhancement (no JavaScript)", () => {
 
 		// Check high
 		await page.click('input[name="level"][value="high"]');
-		await expect(page.locator('[data-union-level="high"]')).toBeVisible();
+		await expect(page.locator(radioHigh())).toBeVisible();
 
 		// Switch to medium
 		await page.click('input[name="level"][value="medium"]');
-		await expect(page.locator('[data-union-level="high"]')).toBeHidden();
-		await expect(page.locator('[data-union-level="medium"]')).toBeVisible();
+		await expect(page.locator(radioHigh())).toBeHidden();
+		await expect(page.locator(radioMedium())).toBeVisible();
 	});
 
 	test("radio: form submission works without JS", async ({ page }) => {
@@ -338,11 +372,11 @@ test.describe("Progressive enhancement (no JavaScript)", () => {
 		await page.goto("/valibot-form");
 
 		// Fallback visible initially
-		await expect(page.locator('[data-union-method="fallback"]')).toBeVisible();
+		await expect(page.locator(valibotFallback())).toBeVisible();
 
 		// Select and submit
 		await page.selectOption('select[name="method"]', "cash");
-		await expect(page.locator('[data-union-method="cash"]')).toBeVisible();
+		await expect(page.locator(valibotCash())).toBeVisible();
 
 		await page.click('button[type="submit"]');
 		await expect(page.locator(".message")).toContainText("Success: Cash payment");
@@ -350,9 +384,9 @@ test.describe("Progressive enhancement (no JavaScript)", () => {
 });
 
 // =============================================================================
-// Programmatic Form Tests (discriminatedFields features)
+// Programmatic Form Tests (discriminated features)
 //
-// Tests for: set(), ${key}Value, asRadio(), issues(), using without UnionVariants
+// Tests for: set(), ${key}Value, asRadio(), issues(), using without FieldVariants
 // =============================================================================
 
 test.describe("Programmatic form controls", () => {
@@ -436,9 +470,9 @@ test.describe("Programmatic form controls", () => {
 		await expect(page.getByTestId("phone-error")).toContainText("Phone must be at least 10 digits");
 	});
 
-	// Using discriminatedFields without UnionVariants
-	test("works without UnionVariants component", async ({ page }) => {
-		// The programmatic-form page uses manual if/else instead of UnionVariants
+	// Using discriminated() without FieldVariants
+	test("works without FieldVariants component", async ({ page }) => {
+		// The programmatic-form page uses manual if/else instead of FieldVariants
 		// Verify visibility switching still works
 
 		await page.click('input[name="channel"][value="email"]');
@@ -479,13 +513,13 @@ test.describe("Programmatic form controls", () => {
 });
 
 // =============================================================================
-// Selector prop tests - non-sibling DOM layouts
+// Non-sibling DOM layout tests
 //
-// Tests for: selector prop allowing UnionVariants to work when discriminator
+// Tests for: form:has() CSS allowing FieldVariants to work when discriminator
 // and variants are not siblings in the DOM
 // =============================================================================
 
-test.describe("Selector prop (non-sibling layout)", () => {
+test.describe("Non-sibling DOM layout (select)", () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto("/selector-form");
 		await page.waitForLoadState("networkidle");
@@ -558,10 +592,10 @@ test.describe("Selector prop (non-sibling layout)", () => {
 });
 
 // =============================================================================
-// Selector prop with radio buttons
+// Non-sibling DOM layout with radio buttons
 // =============================================================================
 
-test.describe("Selector prop with radio buttons", () => {
+test.describe("Non-sibling DOM layout (radio)", () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto("/selector-radio-form");
 		await page.waitForLoadState("networkidle");
@@ -668,11 +702,11 @@ test.describe("Edge cases", () => {
 		await expect(page.getByTestId("partial-beta")).toBeVisible();
 	});
 
-	test("partial={true} shows fallback when missing snippet selected", async ({ page }) => {
+	test("partial={true} hides fallback when missing snippet selected (shows nothing)", async ({ page }) => {
 		await page.getByTestId("partial-select").selectOption("gamma");
 
-		// Fallback should still be visible (no snippet for gamma, so fallback is the catch-all)
-		await expect(page.getByTestId("partial-fallback")).toBeVisible();
+		// Fallback is hidden when any value is selected (not a catch-all)
+		await expect(page.getByTestId("partial-fallback")).toBeHidden();
 		// Alpha and beta should be hidden
 		await expect(page.getByTestId("partial-alpha")).toBeHidden();
 		await expect(page.getByTestId("partial-beta")).toBeHidden();
@@ -710,7 +744,7 @@ test.describe("Edge cases", () => {
 	});
 
 	// -------------------------------------------------------------------------
-	// Validation errors with UnionVariants
+	// Validation errors with FieldVariants
 	// -------------------------------------------------------------------------
 
 	test("validation errors: shows error for empty required field", async ({ page }) => {
@@ -824,7 +858,7 @@ test.describe("Nested discriminated union", () => {
 	});
 });
 
-test.describe("Common fields outside UnionVariants", () => {
+test.describe("Common fields outside FieldVariants", () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto("/nested-form");
 		await page.waitForLoadState("networkidle");
@@ -1001,5 +1035,130 @@ test.describe("Discriminated union inside discriminated union", () => {
 
 		await expect(page.getByTestId("success")).toBeVisible({ timeout: 10000 });
 		await expect(page.getByTestId("success")).toContainText("Alert (error): code=ERR_500");
+	});
+});
+
+// =============================================================================
+// DOM Presence Tests - verifies progressive enhancement behavior
+// With JS disabled: all variant fields are in DOM (CSS hides them)
+// With JS enabled: only active variant fields are in DOM (conditional rendering)
+// Uses zod-form which has no transitions (selector-form has transitions for manual testing)
+// =============================================================================
+
+test.describe("Progressive enhancement: DOM presence", () => {
+	// Test selectors for zod-form (no transitions, cleaner for testing)
+	const circle = () => 'input[name="n:radius"]';
+	const rectangle = () => 'input[name="n:width"]';
+	const point = () => 'input[name="n:x"]';
+	const fallback = () => 'p:has-text("Please select a shape type above")';
+
+	test.describe("Without JavaScript (CSS-only mode)", () => {
+		test.use({ javaScriptEnabled: false });
+
+		test("all variant fields exist in DOM when nothing selected", async ({ page }) => {
+			await page.goto("/zod-form");
+
+			// Fallback is visible
+			await expect(page.locator(fallback())).toBeVisible();
+
+			// ALL variant fields are in DOM (just hidden by CSS)
+			await expect(page.locator(circle())).toBeAttached();
+			await expect(page.locator(rectangle())).toBeAttached();
+			await expect(page.locator(point())).toBeAttached();
+
+			// But they should be hidden (CSS display: none)
+			await expect(page.locator(circle())).toBeHidden();
+			await expect(page.locator(rectangle())).toBeHidden();
+			await expect(page.locator(point())).toBeHidden();
+		});
+
+		test("all variant fields remain in DOM when variant selected", async ({ page }) => {
+			await page.goto("/zod-form");
+			await page.selectOption('select[name="kind"]', "circle");
+
+			// Circle is visible, others are hidden
+			await expect(page.locator(circle())).toBeVisible();
+			await expect(page.locator(rectangle())).toBeHidden();
+			await expect(page.locator(point())).toBeHidden();
+
+			// But ALL are still in the DOM
+			await expect(page.locator(circle())).toBeAttached();
+			await expect(page.locator(rectangle())).toBeAttached();
+			await expect(page.locator(point())).toBeAttached();
+		});
+	});
+
+	test.describe("With JavaScript (conditional rendering mode)", () => {
+		// JS is enabled by default
+
+		test("only fallback exists in DOM when nothing selected", async ({ page }) => {
+			await page.goto("/zod-form");
+
+			// Wait for hydration
+			await page.waitForTimeout(100);
+
+			// Fallback is visible and in DOM
+			await expect(page.locator(fallback())).toBeVisible();
+
+			// Other variants should NOT be in the DOM at all (conditional rendering)
+			await expect(page.locator(circle())).not.toBeAttached();
+			await expect(page.locator(rectangle())).not.toBeAttached();
+			await expect(page.locator(point())).not.toBeAttached();
+		});
+
+		test("only active variant exists in DOM when selected", async ({ page }) => {
+			await page.goto("/zod-form");
+
+			// Wait for hydration - fallback should initially be the only thing in DOM
+			await expect(page.locator(fallback())).toBeVisible();
+			await expect(page.locator(circle())).not.toBeAttached();
+
+			// Now select circle
+			await page.selectOption('select[name="kind"]', "circle");
+
+			// Circle is visible and in DOM
+			await expect(page.locator(circle())).toBeVisible();
+			await expect(page.locator(circle())).toBeAttached();
+
+			// Other variants should NOT be in the DOM at all
+			await expect(page.locator(rectangle())).not.toBeAttached();
+			await expect(page.locator(point())).not.toBeAttached();
+
+			// Fallback should NOT be in the DOM
+			await expect(page.locator(fallback())).not.toBeAttached();
+		});
+
+		test("switching variants changes which elements are in DOM", async ({ page }) => {
+			await page.goto("/zod-form");
+
+			// Wait for hydration
+			await expect(page.locator(fallback())).toBeVisible();
+			await expect(page.locator(circle())).not.toBeAttached();
+
+			// Select circle
+			await page.selectOption('select[name="kind"]', "circle");
+			await expect(page.locator(circle())).toBeAttached();
+			await expect(page.locator(rectangle())).not.toBeAttached();
+			await expect(page.locator(point())).not.toBeAttached();
+
+			// Switch to rectangle
+			await page.selectOption('select[name="kind"]', "rectangle");
+			await expect(page.locator(rectangle())).toBeAttached();
+			await expect(page.locator(circle())).not.toBeAttached();
+			await expect(page.locator(point())).not.toBeAttached();
+
+			// Switch to point
+			await page.selectOption('select[name="kind"]', "point");
+			await expect(page.locator(point())).toBeAttached();
+			await expect(page.locator(circle())).not.toBeAttached();
+			await expect(page.locator(rectangle())).not.toBeAttached();
+
+			// Switch back to empty (fallback)
+			await page.selectOption('select[name="kind"]', "");
+			await expect(page.locator(fallback())).toBeAttached();
+			await expect(page.locator(circle())).not.toBeAttached();
+			await expect(page.locator(rectangle())).not.toBeAttached();
+			await expect(page.locator(point())).not.toBeAttached();
+		});
 	});
 });
