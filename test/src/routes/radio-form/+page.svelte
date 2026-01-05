@@ -2,7 +2,7 @@
 	import { priorityForm } from "./data.remote";
 	import { discriminated, FieldVariants } from "sveltekit-discriminated-fields";
 
-	const priority = $derived(discriminated("level", priorityForm.fields));
+	const priority = $derived(discriminated(priorityForm.fields, "level"));
 
 	// =============================================================================
 	// Type Tests: .as("radio", value) is properly typed for discriminator fields
@@ -10,15 +10,15 @@
 
 	$effect(() => {
 		// Valid values work
-		priority.level.as("radio", "high");
-		priority.level.as("radio", "medium");
-		priority.level.as("radio", "low");
+		priority.fields.level.as("radio", "high");
+		priority.fields.level.as("radio", "medium");
+		priority.fields.level.as("radio", "low");
 
 		// @ts-expect-error - invalid value rejected
-		priority.level.as("radio", "invalid");
+		priority.fields.level.as("radio", "invalid");
 
 		// @ts-expect-error - typo rejected (case sensitive)
-		priority.level.as("radio", "High");
+		priority.fields.level.as("radio", "High");
 	});
 </script>
 
@@ -28,40 +28,40 @@
 	<fieldset>
 		<legend>Priority Level:</legend>
 		<label>
-			<input {...priority.level.as("radio", "high")} />
+			<input {...priority.fields.level.as("radio", "high")} />
 			High
 		</label>
 		<label>
-			<input {...priority.level.as("radio", "medium")} />
+			<input {...priority.fields.level.as("radio", "medium")} />
 			Medium
 		</label>
 		<label>
-			<input {...priority.level.as("radio", "low")} />
+			<input {...priority.fields.level.as("radio", "low")} />
 			Low
 		</label>
 	</fieldset>
 
-	<FieldVariants fields={priority} key="level">
+	<FieldVariants fields={priorityForm.fields} key="level">
 		{#snippet fallback(props)}
 			<p {...props}>Please select a priority level above.</p>
 		{/snippet}
 
-		{#snippet high(v)}
-			<label {...v}>
+		{#snippet high(priority)}
+			<label {...priority}>
 				Deadline:
-				<input {...v.fields.deadline.as("text")} placeholder="Enter deadline" />
+				<input {...priority.fields.deadline.as("text")} placeholder="Enter deadline" />
 			</label>
 		{/snippet}
 
-		{#snippet medium(v)}
-			<label {...v}>
+		{#snippet medium(priority)}
+			<label {...priority}>
 				Notes (optional):
-				<input {...v.fields.notes.as("text")} placeholder="Any notes?" />
+				<input {...priority.fields.notes.as("text")} placeholder="Any notes?" />
 			</label>
 		{/snippet}
 
-		{#snippet low(v)}
-			<p {...v}>No additional information needed for low priority.</p>
+		{#snippet low(priority)}
+			<p {...priority}>No additional information needed for low priority.</p>
 		{/snippet}
 	</FieldVariants>
 

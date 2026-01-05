@@ -2,7 +2,7 @@
 	import { shippingForm } from "./data.remote";
 	import { FieldVariants, discriminated } from "sveltekit-discriminated-fields";
 
-	const shipping = $derived(discriminated("speed", shippingForm.fields));
+	const shipping = $derived(discriminated(shippingForm.fields, "speed"));
 </script>
 
 <h1>Radio Buttons with Non-Sibling Layout</h1>
@@ -15,11 +15,11 @@
 		<fieldset id="speed-options" data-testid="speed-options">
 			<legend>Select Speed:</legend>
 			<label>
-				<input {...shipping.speed.as("radio", "standard")} />
+				<input {...shipping.fields.speed.as("radio", "standard")} />
 				Standard
 			</label>
 			<label>
-				<input {...shipping.speed.as("radio", "express")} />
+				<input {...shipping.fields.speed.as("radio", "express")} />
 				Express
 			</label>
 		</fieldset>
@@ -35,19 +35,19 @@
 				{#snippet fallback(props)}
 					<p {...props} data-testid="fallback">Please select a shipping speed above.</p>
 				{/snippet}
-				{#snippet standard(v)}
-					<div {...v} data-testid="standard-fields">
+				{#snippet standard(shipping)}
+					<div {...shipping} data-testid="standard-fields">
 						<label>
 							Estimated Days:
-							<input {...v.fields.estimatedDays.as("text")} data-testid="days-input" />
+							<input {...shipping.fields.estimatedDays.as("text")} data-testid="days-input" />
 						</label>
 					</div>
 				{/snippet}
-				{#snippet express(v)}
-					<div {...v} data-testid="express-fields">
+				{#snippet express(shipping)}
+					<div {...shipping} data-testid="express-fields">
 						<label>
 							Tracking ID:
-							<input {...v.fields.trackingId.as("text")} data-testid="tracking-input" />
+							<input {...shipping.fields.trackingId.as("text")} data-testid="tracking-input" />
 						</label>
 					</div>
 				{/snippet}

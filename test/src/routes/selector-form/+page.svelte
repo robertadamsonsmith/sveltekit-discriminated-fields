@@ -35,19 +35,19 @@
 				{#snippet fallback(props)}
 					<p {...props} data-testid="fallback" transition:slide>Please select a contact method above.</p>
 				{/snippet}
-				{#snippet email(v)}
-					<div {...v} data-testid="email-fields" transition:slide>
+				{#snippet email(contact)}
+					<div {...contact} data-testid="email-fields" transition:slide>
 						<label>
 							Email Address:
-							<input {...v.fields.emailAddress.as("email")} data-testid="email-input" />
+							<input {...contact.fields.emailAddress.as("email")} data-testid="email-input" />
 						</label>
 					</div>
 				{/snippet}
-				{#snippet phone(v)}
-					<div {...v} data-testid="phone-fields" transition:slide>
+				{#snippet phone(contact)}
+					<div {...contact} data-testid="phone-fields" transition:slide>
 						<label>
 							Phone Number:
-							<input {...v.fields.phoneNumber.as("tel")} data-testid="phone-input" />
+							<input {...contact.fields.phoneNumber.as("tel")} data-testid="phone-input" />
 						</label>
 					</div>
 				{/snippet}

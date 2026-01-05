@@ -32,10 +32,6 @@ type VariantDiscriminatorField<V extends string, AllV extends string> = Omit<Rem
 };
 
 // =============================================================================
-// Build discriminated fields from data type
-// =============================================================================
-
-// =============================================================================
 // Nested field building - uses SvelteKit's RemoteFormFields
 // =============================================================================
 
@@ -46,22 +42,33 @@ type NestedField<V> = [V] extends [object]
 	: RemoteFormField<V & RemoteFormFieldValue>;
 
 // =============================================================================
-// Variant fields
+// Variant fields - new structure with .type and .fields
 // =============================================================================
+
+// Fields object containing discriminator field + variant-specific fields
+type FieldsObject<K extends string, D, V extends string, AllV extends string> = {
+	readonly [P in K]: VariantDiscriminatorField<V, AllV>;
+} & {
+	readonly [P in Exclude<keyof D, K>]: NestedField<D[P & keyof D]>;
+};
 
 // Variant fields - distributes over D to build each variant
 // V is the specific variant value, AllV is all possible values (for .as("radio"))
 type VariantFields<K extends string, D, AllV extends string> = D extends Record<K, infer V>
-	? { readonly [P in `${K}Value`]: V } & { readonly [P in K]: VariantDiscriminatorField<V & string, AllV> } & {
-			readonly [P in Exclude<keyof D, K>]: NestedField<D[P & keyof D]>;
+	? {
+			readonly type: V;
+			readonly fields: FieldsObject<K, D, V & string, AllV>;
 		}
 	: never;
 
 // Undefined case (no variant selected yet) - includes common fields (keys in all variants)
-type UndefinedVariant<K extends string, D, AllV extends string> = { readonly [P in `${K}Value`]: undefined } & {
-	readonly [P in K]: VariantDiscriminatorField<AllV, AllV>;
-} & {
-	readonly [P in Exclude<keyof D, K>]: NestedField<D[P & keyof D]>;
+type UndefinedVariant<K extends string, D, AllV extends string> = {
+	readonly type: undefined;
+	readonly fields: {
+		readonly [P in K]: VariantDiscriminatorField<AllV, AllV>;
+	} & {
+		readonly [P in Exclude<keyof D, K>]: NestedField<D[P & keyof D]>;
+	};
 };
 
 // Type-safe set method
@@ -86,35 +93,32 @@ type DiscriminatedFields<K extends string, D, AllV extends string = Discriminato
 // =============================================================================
 
 /**
- * Marks discriminated union form fields for type-safe narrowing.
- * - All original fields pass through unchanged (type, issues, allIssues, etc.)
- * - `set` is overridden with type-safe version
- * - `${key}Value` is added for discriminator value (e.g., `reward.typeValue`)
- * - Discriminator field `.as("radio", value)` is type-safe (only valid values allowed)
- * - Discriminator field `.as("option", value?)` is type-safe for select options
+ * Wraps discriminated union form fields for type-safe narrowing.
  *
  * @example
  * ```svelte
  * <script>
- *   const priority = $derived(discriminated("level", priorityForm.fields));
+ *   const priority = $derived(discriminated(priorityForm.fields, "level"));
  * </script>
  *
- * <input {...priority.level.as("radio", "high")} /> <!-- type-safe: only valid values allowed -->
+ * {#if priority.type === "high"}
+ *   <input {...priority.fields.urgency.as("number")} />
+ * {/if}
  *
- * <select {...priority.level.as("select")}>
- *   <option {...priority.level.as("option")}>Select...</option>
- *   <option {...priority.level.as("option", "high")}>High</option>
+ * <select {...priority.fields.level.as("select")}>
+ *   <option {...priority.fields.level.as("option")}>Select...</option>
+ *   <option {...priority.fields.level.as("option", "high")}>High</option>
  * </select>
  * ```
  *
- * @param key - Discriminator key (e.g. 'type')
  * @param fields - Form fields from a discriminated union schema
- * @returns Passthrough object with type-safe set(), ${key}Value, .as("radio", value), and .as("option", value?)
+ * @param key - Discriminator key (e.g. 'type', 'kind')
+ * @returns Object with `.type` (discriminator value), `.fields` (all form fields), `.set()`, `.allIssues()`
  */
 export function discriminated<
 	K extends string,
 	T extends { set: (v: never) => unknown } & Record<K, { value(): unknown; as(type: 'radio', value: string): object }>
->(key: K, fields: T): DiscriminatedFields<K, DiscriminatedData<T>> {
+>(fields: T, key: K): DiscriminatedFields<K, DiscriminatedData<T>> {
 	// Wrap the discriminator field to intercept as("option", value?) calls
 	const wrapDiscriminatorField = (field: T[K]) => {
 		return new Proxy(field, {
@@ -132,16 +136,27 @@ export function discriminated<
 		});
 	};
 
-	const proxy = new Proxy(fields, {
+	// Create the fields proxy that wraps the discriminator field
+	const fieldsProxy = new Proxy(fields, {
 		get(target, prop) {
-			if (prop === `${key}Value`) return target[key].value();
-			if (prop === 'set') return (data: Parameters<T['set']>[0]) => target.set(data);
 			if (prop === key) return wrapDiscriminatorField(target[key]);
 			return Reflect.get(target, prop);
-		},
-		has(target, prop) {
-			return prop === `${key}Value` || prop in target;
 		}
 	});
-	return proxy as DiscriminatedFields<K, DiscriminatedData<T>>;
+
+	// Create the main proxy with .type, .fields, .set, .allIssues
+	const proxy = new Proxy(fields, {
+		get(target, prop) {
+			if (prop === 'type') return target[key].value();
+			if (prop === 'fields') return fieldsProxy;
+			if (prop === 'set') return (data: Parameters<T['set']>[0]) => target.set(data);
+			if (prop === 'allIssues') return () => (target as unknown as { allIssues?: () => unknown }).allIssues?.();
+			return undefined;
+		},
+		has(_target, prop) {
+			return prop === 'type' || prop === 'fields' || prop === 'set' || prop === 'allIssues';
+		}
+	});
+
+	return proxy as unknown as DiscriminatedFields<K, DiscriminatedData<T>>;
 }

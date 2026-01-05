@@ -26,12 +26,12 @@
 			<p {...props} data-testid="outer-fallback">Please select a notification type.</p>
 		{/snippet}
 
-		{#snippet alert(v)}
-			<div {...v} data-testid="alert-section">
+		{#snippet alert(notification)}
+			<div {...notification} data-testid="alert-section">
 				<h3>Alert Configuration</h3>
 				<label>
 					Severity:
-					<select {...v.fields.severity.level.as("select")}>
+					<select {...notification.fields.severity.level.as("select")}>
 						<option value="">Select severity...</option>
 						<option value="warning">Warning</option>
 						<option value="error">Error</option>
@@ -39,25 +39,25 @@
 				</label>
 
 				<!-- Inner FieldVariants for the nested discriminated union -->
-				<FieldVariants fields={v.fields.severity} key="level">
+				<FieldVariants fields={notification.fields.severity} key="level">
 					{#snippet fallback(innerProps)}
 						<p {...innerProps} data-testid="inner-fallback">Please select a severity level.</p>
 					{/snippet}
 
-					{#snippet warning(inner)}
-						<div {...inner} data-testid="warning-fields">
+					{#snippet warning(severity)}
+						<div {...severity} data-testid="warning-fields">
 							<label>
-								<input {...inner.fields.dismissible.as("checkbox")} />
+								<input {...severity.fields.dismissible.as("checkbox")} />
 								Dismissible
 							</label>
 						</div>
 					{/snippet}
 
-					{#snippet error(inner)}
-						<div {...inner} data-testid="error-fields">
+					{#snippet error(severity)}
+						<div {...severity} data-testid="error-fields">
 							<label>
 								Error Code:
-								<input {...inner.fields.errorCode.as("text")} placeholder="E.g. ERR_001" />
+								<input {...severity.fields.errorCode.as("text")} placeholder="E.g. ERR_001" />
 							</label>
 						</div>
 					{/snippet}
@@ -65,11 +65,11 @@
 			</div>
 		{/snippet}
 
-		{#snippet message(v)}
-			<div {...v} data-testid="message-section">
+		{#snippet message(notification)}
+			<div {...notification} data-testid="message-section">
 				<label>
 					Content:
-					<input {...v.fields.content.as("text")} placeholder="Enter message..." />
+					<input {...notification.fields.content.as("text")} placeholder="Enter message..." />
 				</label>
 			</div>
 		{/snippet}

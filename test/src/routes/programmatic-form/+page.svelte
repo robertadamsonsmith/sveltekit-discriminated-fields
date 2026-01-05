@@ -2,7 +2,7 @@
 	import { notificationForm } from "./data.remote";
 	import { discriminated } from "sveltekit-discriminated-fields";
 
-	const notification = $derived(discriminated("channel", notificationForm.fields));
+	const notification = $derived(discriminated(notificationForm.fields, "channel"));
 
 	// Test: programmatic set() for each variant
 	function setEmail() {
@@ -35,58 +35,58 @@
 	<fieldset>
 		<legend>Notification Channel:</legend>
 		<label>
-			<input {...notification.channel.as("radio", "email")} />
+			<input {...notification.fields.channel.as("radio", "email")} />
 			Email
 		</label>
 		<label>
-			<input {...notification.channel.as("radio", "sms")} />
+			<input {...notification.fields.channel.as("radio", "sms")} />
 			SMS
 		</label>
 		<label>
-			<input {...notification.channel.as("radio", "push")} />
+			<input {...notification.fields.channel.as("radio", "push")} />
 			Push
 		</label>
 	</fieldset>
 
 	<!-- Test: channelValue accessor -->
 	<p data-testid="channel-value">
-		Current channel: <strong>{notification.channelValue ?? "none"}</strong>
+		Current channel: <strong>{notification.type ?? "none"}</strong>
 	</p>
 
 	<!-- Test: using discriminated without FieldVariants -->
-	{#if notification.channelValue === "email"}
+	{#if notification.type === "email"}
 		<div data-testid="email-fields">
 			<label>
 				Email Address:
-				<input {...notification.email.as("email")} data-testid="email-input" />
+				<input {...notification.fields.email.as("email")} data-testid="email-input" />
 			</label>
-			{#if notification.email.issues()?.length}
+			{#if notification.fields.email.issues()?.length}
 				<div class="field-error" data-testid="email-error">
-					{notification.email.issues()?.[0]?.message}
+					{notification.fields.email.issues()?.[0]?.message}
 				</div>
 			{/if}
 		</div>
-	{:else if notification.channelValue === "sms"}
+	{:else if notification.type === "sms"}
 		<div data-testid="sms-fields">
 			<label>
 				Phone Number:
-				<input {...notification.phone.as("tel")} data-testid="phone-input" />
+				<input {...notification.fields.phone.as("tel")} data-testid="phone-input" />
 			</label>
-			{#if notification.phone.issues()?.length}
+			{#if notification.fields.phone.issues()?.length}
 				<div class="field-error" data-testid="phone-error">
-					{notification.phone.issues()?.[0]?.message}
+					{notification.fields.phone.issues()?.[0]?.message}
 				</div>
 			{/if}
 		</div>
-	{:else if notification.channelValue === "push"}
+	{:else if notification.type === "push"}
 		<div data-testid="push-fields">
 			<label>
 				Device ID:
-				<input {...notification.deviceId.as("text")} data-testid="device-input" />
+				<input {...notification.fields.deviceId.as("text")} data-testid="device-input" />
 			</label>
-			{#if notification.deviceId.issues()?.length}
+			{#if notification.fields.deviceId.issues()?.length}
 				<div class="field-error" data-testid="device-error">
-					{notification.deviceId.issues()?.[0]?.message}
+					{notification.fields.deviceId.issues()?.[0]?.message}
 				</div>
 			{/if}
 		</div>
