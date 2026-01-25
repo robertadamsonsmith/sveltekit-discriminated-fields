@@ -37,9 +37,12 @@ type VariantDiscriminatorField<V extends string, AllV extends string> = Omit<Rem
 
 // Build field type - uses SvelteKit's RemoteFormFields for nested objects
 // This correctly includes set(), value(), issues(), allIssues() on nested containers
-type NestedField<V> = [V] extends [object]
+// Uses NonNullable<V> to correctly handle optional fields (T | undefined)
+// Without NonNullable, [T | undefined] extends [object] fails because undefined is not an object
+type NestedField<V> = [NonNullable<V>] extends [object]
 	? RemoteFormFields<V>
 	: RemoteFormField<V & RemoteFormFieldValue>;
+
 
 // =============================================================================
 // Variant fields - new structure with .type and .fields
@@ -56,9 +59,9 @@ type FieldsObject<K extends string, D, V extends string, AllV extends string> = 
 // V is the specific variant value, AllV is all possible values (for .as("radio"))
 type VariantFields<K extends string, D, AllV extends string> = D extends Record<K, infer V>
 	? {
-			readonly type: V;
-			readonly fields: FieldsObject<K, D, V & string, AllV>;
-		}
+		readonly type: V;
+		readonly fields: FieldsObject<K, D, V & string, AllV>;
+	}
 	: never;
 
 // Undefined case (no variant selected yet) - includes common fields (keys in all variants)

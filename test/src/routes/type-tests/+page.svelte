@@ -7,6 +7,7 @@
 		badForm,
 		mixedTypeForm,
 		nestedObjectForm,
+		optionalArrayForm,
 	} from "./data.remote";
 	import {
 		discriminated,
@@ -253,6 +254,43 @@
 
 			// @ts-expect-error - address doesn't exist on company
 			nestedObj.fields.address;
+		}
+	});
+
+	// =============================================================================
+	// Test 11: Optional array of objects in discriminated union variant
+	// Regression test for NestedField NonNullable fix
+	// Before the fix, .set() would error because NestedField incorrectly
+	// intersected with RemoteFormFieldValue (File, string, etc.)
+	// =============================================================================
+
+	const optArray = $derived(discriminated(optionalArrayForm.fields, "mode"));
+
+	$effect(() => {
+		if (optArray.type === "batch") {
+			// .value() should return Item[] | undefined, not a broken intersection type
+			const items = optArray.fields.items.value();
+
+			// .set() should accept Item[] without File intersection errors
+			// This was the original bug - spread operator created new array that failed type check
+			optArray.fields.items.set([]);
+			optArray.fields.items.set([{ name: "test", quantity: 1 }]);
+
+			// Array index access should work for nested object fields
+			optArray.fields.items[0].name.value();
+			optArray.fields.items[0].quantity.value();
+
+			// @ts-expect-error - wrong property on nested object
+			optArray.fields.items[0].wrongField;
+		}
+
+		if (optArray.type === "single") {
+			// Single item should work normally
+			optArray.fields.item.name.value();
+			optArray.fields.item.quantity.value();
+
+			// @ts-expect-error - items doesn't exist on single variant
+			optArray.fields.items;
 		}
 	});
 </script>

@@ -194,3 +194,32 @@ export const nestedObjectForm = form(nestedObjectSchema, async (data) => {
 	}
 	return { success: true, message: `Company: ${data.name} in ${data.headquarters.country}` };
 });
+
+// =============================================================================
+// Schema 8: Optional array of objects in discriminated union variant
+// Tests that NestedField correctly handles T | undefined where T is object[]
+// Regression test for NonNullable fix in NestedField type
+// =============================================================================
+
+const zItem = z.object({
+	name: z.string(),
+	quantity: z.number(),
+});
+
+const optionalArraySchema = z.discriminatedUnion("mode", [
+	z.object({
+		mode: z.literal("single"),
+		item: zItem,
+	}),
+	z.object({
+		mode: z.literal("batch"),
+		// Optional array of objects - this was broken before the NonNullable fix
+		items: z.array(zItem).optional().default([]),
+	}),
+]);
+
+export type OptionalArrayData = z.infer<typeof optionalArraySchema>;
+
+export const optionalArrayForm = form(optionalArraySchema, async (data) => {
+	return { success: true, data };
+});
