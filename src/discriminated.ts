@@ -4,8 +4,13 @@ import type { RemoteFormField, RemoteFormFields, RemoteFormFieldType, RemoteForm
 // Core type extraction
 // =============================================================================
 
-// Data type from fields' set method
-export type DiscriminatedData<T> = T extends { set: (v: infer D) => unknown } ? D : never;
+// Undo DeepPartial wrapping (SvelteKit 2.53+ wraps set/value in DeepPartial)
+type DeepRequired<T> = T extends Record<PropertyKey, unknown>
+	? { [K in keyof T]-?: DeepRequired<T[K]> }
+	: NonNullable<T>;
+
+// Exported type: recovers the full schema type from a discriminated fields object
+export type DiscriminatedData<T> = T extends { set: (v: infer D) => unknown } ? DeepRequired<D> : never;
 
 // Discriminator values from data type
 type DiscriminatorValues<K extends string, D> = D extends Record<K, infer V> ? Exclude<V, undefined> : never;
@@ -75,8 +80,10 @@ type UndefinedVariant<K extends string, D, AllV extends string> = {
 };
 
 // Type-safe set method
-type SetMethod<K extends string, D> = {
-	set: <V extends DiscriminatorValues<K, D>>(data: Extract<D, Record<K, V>>) => void;
+// Uses FullD (DeepRequired) to extract discriminator values and match variants,
+// but accepts DeepPartial data (D) for the actual set call
+type SetMethod<K extends string, D, FullD = DeepRequired<D>> = {
+	set: <V extends DiscriminatorValues<K, FullD>>(data: Extract<D, Record<K, V>> | Extract<FullD, Record<K, V>>) => void;
 };
 
 // Common methods - extracted from SvelteKit's RemoteFormFields
@@ -84,9 +91,11 @@ type SetMethod<K extends string, D> = {
 type CommonMethods = RemoteFormFields<unknown> extends { allIssues: infer M } ? { allIssues: M } : never;
 
 // Full discriminated fields type
-type DiscriminatedFields<K extends string, D, AllV extends string = DiscriminatorValues<K, D> & string> = (
-	| VariantFields<K, D, AllV>
-	| UndefinedVariant<K, D, AllV>
+// Uses DeepRequired<D> for field building (to recover full variant types from DeepPartial)
+// but keeps D (partial) for SetMethod so .set() accepts incomplete variant data
+type DiscriminatedFields<K extends string, D, FullD = DeepRequired<D>, AllV extends string = DiscriminatorValues<K, FullD> & string> = (
+	| VariantFields<K, FullD, AllV>
+	| UndefinedVariant<K, FullD, AllV>
 ) &
 	SetMethod<K, D> &
 	CommonMethods;
